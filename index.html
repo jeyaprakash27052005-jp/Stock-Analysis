@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<title>Stock Analyzer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root{
+  --bg:#0b1220;--panel:#121a2b;--panel2:#18223a;--line:#24304a;--text:#e6ebf5;--muted:#8b97b0;
+  --up:#16c784;--down:#ea3943;--accent:#4c8dff;--warn:#f5a524;--radius:14px;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 Inter,system-ui,sans-serif}
+button,input,select{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:20;background:rgba(11,18,32,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;max-width:1200px;margin:auto}
+.brand{font-weight:700;font-size:17px;letter-spacing:-.01em}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.icon-btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
+nav{display:flex;gap:4px;overflow-x:auto;padding:0 12px 10px;max-width:1200px;margin:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:0 0 auto;background:none;border:1px solid transparent;border-radius:999px;padding:7px 14px;color:var(--muted);cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--panel2);border-color:var(--line);color:var(--text);font-weight:600}
+main{max-width:1200px;margin:auto;padding:16px}
+.view{display:none}.view.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 12px;font-size:15px;font-weight:600}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.stat{background:var(--panel2);border-radius:12px;padding:12px}
+.stat .l{color:var(--muted);font-size:12px}
+.stat .v{font-family:var(--mono);font-size:19px;margin-top:2px}
+.stat .d{font-size:12px;margin-top:2px}
+.up{color:var(--up)}.down{color:var(--down)}.muted{color:var(--muted)}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.SB{background:#0e9f6e}.B{background:#3fb37f}.N{background:#4b5568}.S{background:#d9822b}.SS{background:#e02d3c}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{color:var(--muted);font-weight:500;font-size:12px;text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+tr.click{cursor:pointer}tr.click:hover{background:var(--panel2)}
+.bar{height:6px;border-radius:3px;background:var(--line);position:relative;min-width:70px}
+.bar i{position:absolute;top:0;height:6px;border-radius:3px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.btn{background:var(--accent);border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;color:#fff}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 8px 6px 12px;display:flex;gap:6px;align-items:center}
+.chip button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+.reasons li{margin:4px 0;font-size:14px}.reasons code{font-family:var(--mono);font-size:13px}
+.check{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.loading{color:var(--muted);padding:30px;text-align:center}
+.err{background:rgba(234,57,67,.12);border:1px solid rgba(234,57,67,.35);color:#ffb3b8;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px}
+.ok{background:rgba(22,199,132,.12);border:1px solid rgba(22,199,132,.35);color:#a6f0d0;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.hero h2{margin:0;font-size:20px}
+.score-ring{font-family:var(--mono);font-size:30px;font-weight:600}
+.sub{display:flex;gap:6px;margin:4px 0 14px}
+.sub button{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer;color:var(--muted)}
+.sub button.on{color:var(--text);border-color:var(--accent)}
+.foot{color:var(--muted);font-size:12px;text-align:center;padding:10px 0 30px}
+#login{position:fixed;inset:0;background:var(--bg);display:none;place-items:center;z-index:50}
+#login .card{width:min(360px,90vw)}
+.chart{width:100%;min-height:300px}
+@media(max-width:640px){main{padding:12px}.stat .v{font-size:17px}td,th{padding:9px 5px}.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<div id="login"><div class="card">
+  <h3>📈 Stock Analyzer</h3>
+  <p class="muted" style="margin-top:0">Enter your app password</p>
+  <div class="row"><input id="pw" type="password" style="flex:1" placeholder="Password"><button class="btn" id="pwBtn">Open</button></div>
+  <div id="pwErr" class="err" style="display:none;margin-top:10px">Wrong password</div>
+</div></div>
+
+<header>
+  <div class="top">
+    <div class="brand">📈 Stock Analyzer<small id="srcLabel">Loading…</small></div>
+    <button class="icon-btn" id="refresh" title="Refresh">↻ Refresh</button>
+  </div>
+  <nav id="tabs">
+    <button data-v="market" class="on">🌐 Market</button>
+    <button data-v="scan">🔎 Scanner</button>
+    <button data-v="stock">🧠 Analysis</button>
+    <button data-v="signals">📜 Signals</button>
+    <button data-v="watch">⭐ Watchlist & Alerts</button>
+    <button data-v="db">🗄️ Database</button>
+  </nav>
+</header>
+
+<main>
+  <section class="view on" id="v-market"></section>
+  <section class="view" id="v-scan"></section>
+  <section class="view" id="v-stock">
+    <div class="card"><div class="row">
+      <input id="sym" list="symlist" placeholder="NSE symbol, e.g. TCS" style="flex:1;text-transform:uppercase">
+      <datalist id="symlist"></datalist>
+      <button class="btn" id="go">Analyse</button>
+    </div></div>
+    <div id="stockOut"><div class="loading">Search any NSE stock, or tap one in the Scanner.</div></div>
+  </section>
+  <section class="view" id="v-signals"></section>
+  <section class="view" id="v-watch"></section>
+  <section class="view" id="v-db"></section>
+  <div class="foot">For analysis and learning only — not investment advice. Prices from Yahoo Finance are delayed ~15 min.</div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const NIFTY50 = "ADANIENT ADANIPORTS APOLLOHOSP ASIANPAINT AXISBANK BAJAJ-AUTO BAJFINANCE BAJAJFINSV BEL BHARTIARTL CIPLA COALINDIA DRREDDY EICHERMOT ETERNAL GRASIM HCLTECH HDFCBANK HDFCLIFE HEROMOTOCO HINDALCO HINDUNILVR ICICIBANK INDUSINDBK INFY ITC JIOFIN JSWSTEEL KOTAKBANK LT M&M MARUTI NESTLEIND NTPC ONGC POWERGRID RELIANCE SBILIFE SBIN SHRIRAMFIN SUNPHARMA TATACONSUM TATASTEEL TCS TECHM TITAN TRENT ULTRACEMCO WIPRO".split(" ");
+$("#symlist").innerHTML = NIFTY50.map(s => `<option value="${s}">`).join("");
+
+let PW = "";
+try { PW = localStorage.getItem("sa_pw") || ""; } catch (e) {}
+const loaded = {};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {...opts, headers: {"Content-Type": "application/json", "x-app-password": PW, ...(opts.headers || {})}});
+  if (res.status === 401) { showLogin(); throw new Error("Password required"); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `Error ${res.status}`);
+  return data;
+}
+
+// ---------- formatting ----------
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const inr = (v, d = 2) => v == null ? "–" : "₹" + Number(v).toLocaleString("en-IN", {minimumFractionDigits: d, maximumFractionDigits: d});
+const num = (v, d = 2) => v == null ? "–" : Number(v).toLocaleString("en-IN", {minimumFractionDigits: d, maximumFractionDigits: d});
+const pct = v => v == null ? "–" : `<span class="${v > 0 ? "up" : v < 0 ? "down" : ""}">${v > 0 ? "+" : ""}${num(v)}%</span>`;
+const cls = s => ({"STRONG BUY":"SB","BUY":"B","NEUTRAL":"N","HOLD":"N","SELL":"S","STRONG SELL":"SS"}[s] || "N");
+const pill = s => `<span class="pill ${cls(s)}">${esc(s)}</span>`;
+const bigInr = v => v == null ? "–" : v >= 1e12 ? `₹${num(v / 1e12)} L Cr` : v >= 1e7 ? `₹${num(v / 1e7, 0)} Cr` : inr(v, 0);
+const scoreBar = s => { const w = Math.abs(s) / 2; return `<div class="bar"><i style="left:${s >= 0 ? 50 : 50 - w}%;width:${w}%;background:${s >= 0 ? "var(--up)" : "var(--down)"}"></i></div>`; };
+const stat = (l, v, d = "") => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${d ? `<div class="d">${d}</div>` : ""}</div>`;
+const loading = t => `<div class="loading">⏳ ${t}</div>`;
+const errBox = e => `<div class="err">⚠️ ${esc(e.message || e)}</div>`;
+const IST = d => new Date(d.endsWith("Z") || d.includes("+") ? d : d + "Z").toLocaleString("en-IN", {timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"});
+
+const PLOT = {paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {color: "#8b97b0", family: "Inter", size: 11},
+  margin: {l: 40, r: 10, t: 10, b: 30}, showlegend: true, legend: {orientation: "h", y: 1.08, x: 0},
+  xaxis: {gridcolor: "#1c2740", rangeslider: {visible: false}}, yaxis: {gridcolor: "#1c2740"}};
+const CFG = {displayModeBar: false, responsive: true};
+
+// ---------- tabs ----------
+$("#tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".view").forEach(x => x.classList.toggle("on", x.id === "v-" + b.dataset.v));
+  load(b.dataset.v);
+});
+const current = () => document.querySelector("#tabs button.on").dataset.v;
+function load(v, force = false) {
+  if (loaded[v] && !force) return;
+  loaded[v] = true;
+  ({market: loadMarket, scan: loadScan, signals: loadSignals, watch: loadWatch, db: loadDb, stock: () => {}})[v]();
+}
+$("#refresh").onclick = () => { const v = current(); v === "stock" && $("#sym").value ? analyse($("#sym").value) : load(v, true); };
+
+// ---------- market ----------
+async function loadMarket() {
+  const el = $("#v-market"); el.innerHTML = loading("Loading market…");
+  try {
+    const m = await api("/api/market");
+    const main = ["NIFTY 50", "SENSEX", "BANK NIFTY", "INDIA VIX"];
+    const idx = m.indices || [];
+    const sect = idx.filter(i => i.name && i.name.startsWith("NIFTY ") && i.name !== "NIFTY 50").sort((a, b) => a.change_pct - b.change_pct);
+    const adv = m.breadth?.advancing ?? 0, dec = m.breadth?.declining ?? 0;
+    const mood = adv > dec * 1.5 ? "Bullish 🟢" : dec > adv * 1.5 ? "Bearish 🔴" : "Mixed 🟡";
+    const mini = rows => `<table><tr><th>Stock</th><th class="num">Price</th><th class="num">Change</th></tr>${(rows || []).map(r =>
+      `<tr class="click" data-s="${esc(r.symbol)}"><td>${esc(r.symbol)}</td><td class="num">${inr(r.price)}</td><td class="num">${pct(r.change_pct)}</td></tr>`).join("")}</table>`;
+    el.innerHTML = `
+      <div class="grid" style="margin-bottom:14px">${main.map(n => { const i = idx.find(x => x.name === n); return i ? stat(n, num(i.price), pct(i.change_pct)) : ""; }).join("")}</div>
+      <div class="card"><h3>NIFTY 50 · 1 year</h3><div id="niftyChart" class="chart"></div></div>
+      <div class="card"><h3>Market breadth (Nifty 50)</h3><div class="grid">${stat("Advancing", `<span class="up">${adv}</span>`)}${stat("Declining", `<span class="down">${dec}</span>`)}${stat("Mood", mood)}</div></div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+        <div class="card"><h3>🚀 Top gainers</h3>${mini(m.gainers)}</div>
+        <div class="card"><h3>📉 Top losers</h3>${mini(m.losers)}</div>
+      </div>
+      <div class="card"><h3>Sector performance today</h3><div id="sectChart" class="chart"></div></div>`;
+    if (m.nifty) {
+      const n = m.nifty;
+      Plotly.newPlot("niftyChart", [
+        {type: "candlestick", x: n.dates, open: n.open, high: n.high, low: n.low, close: n.close, name: "NIFTY", increasing: {line: {color: "#16c784"}}, decreasing: {line: {color: "#ea3943"}}},
+        {type: "scatter", x: n.dates, y: n.ema50, name: "50 EMA", line: {color: "#f5a524", width: 1.3}}], {...PLOT, height: 320}, CFG);
+    }
+    if (sect.length) Plotly.newPlot("sectChart", [{type: "bar", orientation: "h", y: sect.map(s => s.name.replace("NIFTY ", "")), x: sect.map(s => s.change_pct),
+      marker: {color: sect.map(s => s.change_pct >= 0 ? "#16c784" : "#ea3943")}, text: sect.map(s => (s.change_pct > 0 ? "+" : "") + s.change_pct.toFixed(2) + "%"), textposition: "outside", showlegend: false}],
+      {...PLOT, height: 300, margin: {l: 70, r: 40, t: 10, b: 30}, showlegend: false}, CFG);
+  } catch (e) { el.innerHTML = errBox(e); loaded.market = false; }
+}
+
+// ---------- scanner ----------
+async function loadScan() {
+  const el = $("#v-scan"); el.innerHTML = loading("Scanning your watchlist… (10–20 s)");
+  try {
+    const r = await api("/api/scan");
+    const counts = {}; r.results.forEach(x => counts[x.Signal] = (counts[x.Signal] || 0) + 1);
+    el.innerHTML = `
+      ${r.alerts.map(a => `<div class="ok">${esc(a)}</div>`).join("")}
+      ${r.errors.map(e => `<div class="err">⚠️ ${esc(e)}</div>`).join("")}
+      <div class="grid" style="margin-bottom:14px">${["STRONG BUY", "BUY", "NEUTRAL", "SELL", "STRONG SELL"].map(s => stat(s, counts[s] || 0)).join("")}</div>
+      <div class="card"><h3>Watchlist scan <span class="muted" style="font-weight:400">· tap a stock for full analysis</span></h3><div class="scroll"><table>
+        <tr><th>Stock</th><th class="num">Price</th><th class="num">Chg</th><th>Signal</th><th class="num">Score</th><th class="hide-sm"></th><th class="num">RSI</th><th class="num hide-sm">Stop</th><th class="num hide-sm">Target</th></tr>
+        ${r.results.map(x => `<tr class="click" data-s="${esc(x.Symbol)}"><td><b>${esc(x.Symbol)}</b></td><td class="num">${inr(x.Price)}</td><td class="num">${pct(x["Change %"])}</td>
+          <td>${pill(x.Signal)}</td><td class="num">${x.Score > 0 ? "+" : ""}${x.Score}</td><td class="hide-sm">${scoreBar(x.Score)}</td><td class="num">${num(x.RSI, 1)}</td>
+          <td class="num hide-sm">${inr(x["Stop Loss"])}</td><td class="num hide-sm">${inr(x.Target)}</td></tr>`).join("")}
+      </table></div><p class="muted" style="font-size:12px;margin:10px 0 0">Score −100 (strong sell) to +100 (strong buy). New signals are saved to your database automatically.</p></div>`;
+  } catch (e) { el.innerHTML = errBox(e); loaded.scan = false; }
+}
+
+// open stock from any table
+document.addEventListener("click", e => {
+  const tr = e.target.closest("tr.click[data-s]"); if (!tr) return;
+  $("#sym").value = tr.dataset.s;
+  document.querySelector('#tabs button[data-v="stock"]').click();
+  analyse(tr.dataset.s);
+});
+
+// ---------- deep analysis ----------
+$("#go").onclick = () => analyse($("#sym").value);
+$("#sym").addEventListener("keydown", e => e.key === "Enter" && analyse($("#sym").value));
+
+async function analyse(sym) {
+  sym = (sym || "").trim().toUpperCase(); if (!sym) return;
+  const el = $("#stockOut"); el.innerHTML = loading(`Analysing ${esc(sym)}…`);
+  try {
+    const s = await api("/api/stock/" + encodeURIComponent(sym));
+    const t = s.technical, fa = s.fundamental, L = s.levels;
+    el.innerHTML = `
+      <div class="card"><div class="hero">
+        <div><h2>${esc(s.name)}</h2><div class="muted" style="font-size:13px">${esc(s.symbol)}${s.sector ? " · " + esc(s.sector) + " · " + esc(s.industry) : ""}${s.market_cap ? " · M.cap " + bigInr(s.market_cap) : ""}</div>
+          <div style="margin-top:8px;font-family:var(--mono);font-size:22px">${inr(t.Price)} <span style="font-size:15px">${pct(t["Change %"])}</span></div></div>
+        <div style="text-align:right"><div class="muted" style="font-size:12px">Overall rating</div><div class="score-ring">${s.overall}<span class="muted" style="font-size:15px">/100</span></div>${pill(s.overall_label)}</div>
+      </div>
+      <div class="grid" style="margin-top:14px">
+        ${stat("Technical", (t.Score > 0 ? "+" : "") + t.Score, pill(t.Signal))}
+        ${stat("Fundamental", fa.score == null ? "–" : fa.score + "/100", esc(fa.rating))}
+        ${stat("Stop loss", inr(t["Stop Loss"]))}${stat("Target", inr(t.Target))}
+      </div>
+      ${s.in_watchlist ? "" : `<button class="btn ghost" style="margin-top:12px" id="addW">⭐ Add to watchlist</button>`}</div>
+      <div class="sub" id="subtabs"><button data-p="tech" class="on">📊 Technical</button><button data-p="fund">🏢 Fundamental</button><button data-p="ret">📈 Returns & risk</button></div>
+      <div id="p-tech">
+        <div class="card"><div id="pxChart" class="chart"></div></div>
+        <div class="grid" style="margin-bottom:14px">${stat("RSI (14)", num(L.rsi, 1))}${stat("ADX trend", num(L.adx, 1))}${stat("ATR (range)", inr(L.atr))}${stat("Supertrend", L.supertrend > 0 ? '<span class="up">Up</span>' : '<span class="down">Down</span>')}
+          ${stat("52W high", inr(L.high_52w))}${stat("52W low", inr(L.low_52w))}${stat("From 52W high", pct((t.Price / L.high_52w - 1) * 100))}${stat("Volume vs avg", num(t["Vol x Avg"]) + "x")}</div>
+        <div class="card"><h3>Why this signal</h3><ul class="reasons">${t.Reasons.map(r => `<li><code>${esc(r)}</code></li>`).join("")}</ul></div>
+      </div>
+      <div id="p-fund" style="display:none">
+        ${fa.checks.length ? `<div class="card"><h3>Health check</h3>${fa.checks.map(([txt, m]) => `<div class="check"><span>${{good: "✅", bad: "⚠️", neutral: "➖"}[m]}</span><span class="${m === "good" ? "up" : m === "bad" ? "down" : "muted"}">${esc(txt)}</span></div>`).join("")}</div>` : `<div class="card muted">No fundamental data for this symbol.</div>`}
+        ${Object.keys(fa.metrics).length ? `<div class="card"><h3>Key ratios</h3><div class="grid">${Object.entries(fa.metrics).filter(([, v]) => v != null).map(([k, v]) => stat(esc(k), num(v))).join("")}</div></div>` : ""}
+        ${s.yearly ? `<div class="card"><h3>Yearly revenue & profit (₹ Cr)</h3><div id="yrChart" class="chart"></div></div>` : ""}
+        ${s.summary ? `<div class="card"><h3>About</h3><p class="muted" style="margin:0;font-size:14px">${esc(s.summary)}</p></div>` : ""}
+      </div>
+      <div id="p-ret" style="display:none">
+        <div class="card"><h3>Returns</h3><div id="retChart" class="chart"></div></div>
+        <div class="grid">${stat("Volatility (1Y)", num(s.risk.volatility, 1) + "%")}${stat("Max fall (1Y)", `<span class="down">${num(s.risk.max_drawdown, 1)}%</span>`)}${stat("Up days (1Y)", num(s.risk.up_days, 0) + "%")}</div>
+      </div>`;
+
+    const c = s.chart;
+    Plotly.newPlot("pxChart", [
+      {type: "candlestick", x: c.dates, open: c.open, high: c.high, low: c.low, close: c.close, name: "Price", increasing: {line: {color: "#16c784"}}, decreasing: {line: {color: "#ea3943"}}, yaxis: "y"},
+      {x: c.dates, y: c.ema20, name: "EMA20", line: {color: "#4c8dff", width: 1.2}, yaxis: "y"},
+      {x: c.dates, y: c.ema50, name: "EMA50", line: {color: "#f5a524", width: 1.2}, yaxis: "y"},
+      {x: c.dates, y: c.ema200, name: "EMA200", line: {color: "#b37bff", width: 1.2}, yaxis: "y"},
+      {x: c.dates, y: c.bb_upper, name: "Bollinger", line: {color: "#5b6680", width: .8, dash: "dot"}, yaxis: "y"},
+      {x: c.dates, y: c.bb_lower, showlegend: false, line: {color: "#5b6680", width: .8, dash: "dot"}, yaxis: "y"},
+      {type: "bar", x: c.dates, y: c.volume, name: "Volume", marker: {color: c.close.map((v, i) => v >= c.open[i] ? "#16c78466" : "#ea394366")}, yaxis: "y2", showlegend: false},
+      {type: "bar", x: c.dates, y: c.macd_hist, name: "MACD", marker: {color: c.macd_hist.map(v => v >= 0 ? "#16c784" : "#ea3943")}, yaxis: "y3", showlegend: false},
+      {x: c.dates, y: c.rsi, name: "RSI", line: {color: "#b37bff", width: 1.2}, yaxis: "y4", showlegend: false},
+    ], {...PLOT, height: 620,
+      yaxis: {domain: [.45, 1], gridcolor: "#1c2740"}, yaxis2: {domain: [.32, .43], gridcolor: "#1c2740", title: {text: "Vol", font: {size: 10}}},
+      yaxis3: {domain: [.17, .3], gridcolor: "#1c2740", title: {text: "MACD", font: {size: 10}}}, yaxis4: {domain: [0, .15], range: [0, 100], gridcolor: "#1c2740", title: {text: "RSI", font: {size: 10}}},
+      shapes: [70, 30].map(v => ({type: "line", xref: "paper", x0: 0, x1: 1, yref: "y4", y0: v, y1: v, line: {color: v === 70 ? "#ea3943" : "#16c784", dash: "dash", width: 1}}))}, CFG);
+
+    $("#subtabs").onclick = e => {
+      const b = e.target.closest("button"); if (!b) return;
+      document.querySelectorAll("#subtabs button").forEach(x => x.classList.toggle("on", x === b));
+      ["tech", "fund", "ret"].forEach(p => $("#p-" + p).style.display = p === b.dataset.p ? "block" : "none");
+      if (b.dataset.p === "fund" && s.yearly && !$("#yrChart").dataset.done) {
+        $("#yrChart").dataset.done = 1;
+        const y = s.yearly, series = [["Total Revenue", "#4c8dff"], ["Net Income", "#16c784"]].filter(([k]) => y[k]);
+        Plotly.newPlot("yrChart", series.map(([k, col]) => ({type: "bar", x: y.years, y: y[k], name: k, marker: {color: col}})), {...PLOT, height: 280, barmode: "group"}, CFG);
+      }
+      if (b.dataset.p === "ret" && !$("#retChart").dataset.done) {
+        $("#retChart").dataset.done = 1;
+        Plotly.newPlot("retChart", [{type: "bar", x: s.returns.map(r => r.period), y: s.returns.map(r => r.pct), marker: {color: s.returns.map(r => r.pct >= 0 ? "#16c784" : "#ea3943")},
+          text: s.returns.map(r => (r.pct > 0 ? "+" : "") + r.pct.toFixed(1) + "%"), textposition: "outside", showlegend: false}], {...PLOT, height: 280, showlegend: false}, CFG);
+      }
+      window.dispatchEvent(new Event("resize"));
+    };
+    const add = $("#addW");
+    if (add) add.onclick = async () => { await api("/api/watchlist", {method: "POST", body: JSON.stringify({symbols: [s.symbol]})}); add.remove(); loaded.scan = loaded.watch = false; };
+  } catch (e) { el.innerHTML = errBox(e); }
+}
+
+// ---------- signal history ----------
+async function loadSignals() {
+  const el = $("#v-signals"); el.innerHTML = loading("Loading signal history…");
+  try {
+    const r = await api("/api/signals");
+    if (!r.signals.length) { el.innerHTML = `<div class="card muted">No signals yet. Open the Scanner — every time a stock's signal changes it is saved here, so you can see how the calls performed.</div>`; return; }
+    const sm = r.summary;
+    el.innerHTML = `
+      <div class="grid" style="margin-bottom:14px">${stat("Signals saved", sm.total)}${stat("Buy/Sell calls", sm.calls)}${stat("Right so far", sm.right_pct == null ? "–" : num(sm.right_pct, 0) + "%")}${stat("Avg result", sm.avg_result == null ? "–" : pct(sm.avg_result))}</div>
+      <div class="card"><h3>History</h3><div class="scroll"><table>
+        <tr><th>Time (IST)</th><th>Stock</th><th>Signal</th><th class="num">Then</th><th class="num">Now</th><th class="num">Result</th><th class="hide-sm">Status</th></tr>
+        ${r.signals.map(x => `<tr class="click" data-s="${esc(x.symbol)}"><td class="muted">${IST(x.created_at)}</td><td><b>${esc(x.symbol)}</b></td><td>${pill(x.signal)}</td>
+          <td class="num">${inr(x.price)}</td><td class="num">${inr(x.now)}</td><td class="num">${x.result_pct == null ? "–" : pct(x.result_pct)}</td>
+          <td class="hide-sm">${x.hit_target ? "🎯 Target hit" : x.hit_stop ? "🛑 Stop hit" : x.result_pct == null ? "" : "Open"}</td></tr>`).join("")}
+      </table></div><p class="muted" style="font-size:12px;margin:10px 0 0">Result = profit if you had followed the call (buy → price up, sell → price down).</p></div>`;
+  } catch (e) { el.innerHTML = errBox(e); loaded.signals = false; }
+}
+
+// ---------- watchlist & alerts ----------
+const KINDS = {price_above: "Price goes above", price_below: "Price goes below", rsi_above: "RSI goes above", rsi_below: "RSI goes below", strong_signal: "Strong buy/sell signal"};
+async function loadWatch() {
+  const el = $("#v-watch"); el.innerHTML = loading("Loading…");
+  try {
+    const [w, a] = await Promise.all([api("/api/watchlist"), api("/api/alerts")]);
+    el.innerHTML = `
+      <div class="card"><h3>Watchlist (${w.watchlist.length})</h3>
+        <div class="row" style="margin-bottom:12px"><input id="addSyms" placeholder="Add: WIPRO, TITAN, IRCTC" style="flex:1;text-transform:uppercase"><button class="btn" id="addBtn">Add</button></div>
+        <div class="chips">${w.watchlist.map(s => `<span class="chip">${esc(s)}<button data-rm="${esc(s)}" title="Remove">×</button></span>`).join("")}</div></div>
+      <div class="card"><h3>Create alert</h3>
+        <div class="row"><select id="aSym">${w.watchlist.map(s => `<option>${esc(s)}</option>`).join("")}</select>
+          <select id="aKind">${Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+          <input id="aVal" type="number" step="0.05" placeholder="Value" style="width:110px"><button class="btn" id="aBtn">🔔 Save</button></div>
+        <div id="aMsg"></div>
+        <p class="muted" style="font-size:12px;margin:10px 0 0">Alerts are checked on every scan (and once daily after market close automatically).</p></div>
+      <div class="card"><h3>Your alerts</h3>${a.alerts.length ? a.alerts.map(x => `<div class="check" style="justify-content:space-between;align-items:center">
+          <span><b>${esc(x.symbol)}</b> · ${esc(x.description)}<br><span class="muted" style="font-size:12px">${x.active ? "🟢 Active" : "✅ Triggered at " + inr(x.triggered_price)}</span></span>
+          <button class="icon-btn" data-del="${x.id}">🗑️</button></div>`).join("") : `<span class="muted">No alerts yet.</span>`}</div>`;
+    $("#aKind").onchange = () => $("#aVal").disabled = $("#aKind").value === "strong_signal";
+    $("#addBtn").onclick = async () => {
+      const syms = $("#addSyms").value.split(",").map(s => s.trim()).filter(Boolean); if (!syms.length) return;
+      await api("/api/watchlist", {method: "POST", body: JSON.stringify({symbols: syms})}); loaded.scan = false; loadWatch();
+    };
+    $("#aBtn").onclick = async () => {
+      try {
+        const kind = $("#aKind").value, value = kind === "strong_signal" ? null : parseFloat($("#aVal").value);
+        await api("/api/alerts", {method: "POST", body: JSON.stringify({symbol: $("#aSym").value, kind, value})}); loadWatch();
+      } catch (e) { $("#aMsg").innerHTML = `<div style="margin-top:10px">${errBox(e)}</div>`; }
+    };
+    el.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { await api("/api/watchlist/" + encodeURIComponent(b.dataset.rm), {method: "DELETE"}); loaded.scan = false; loadWatch(); });
+    el.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { await api("/api/alerts/" + b.dataset.del, {method: "DELETE"}); loadWatch(); });
+  } catch (e) { el.innerHTML = errBox(e); loaded.watch = false; }
+}
+
+// ---------- database ----------
+async function loadDb() {
+  const el = $("#v-db"); el.innerHTML = loading("Loading database…");
+  try {
+    const r = await api("/api/prices");
+    el.innerHTML = `<div class="card"><h3>Saved daily prices</h3><p class="muted" style="font-size:13px;margin-top:0">Every scan stores the latest daily candles in your Supabase database, so your own price history grows over time.</p>
+      ${r.stats.length ? `<div class="scroll"><table><tr><th>Stock</th><th class="num">Days</th><th>From</th><th>To</th></tr>
+        ${r.stats.map(x => `<tr class="click-db" data-p="${esc(x.symbol)}" style="cursor:pointer"><td><b>${esc(x.symbol)}</b></td><td class="num">${x.days}</td><td>${esc(x.first_date)}</td><td>${esc(x.last_date)}</td></tr>`).join("")}</table></div>` : `<span class="muted">Nothing saved yet — open the Scanner.</span>`}</div>
+      <div id="dbDetail"></div>`;
+    el.querySelectorAll("[data-p]").forEach(tr => tr.onclick = async () => {
+      const p = await api("/api/prices?symbol=" + encodeURIComponent(tr.dataset.p));
+      $("#dbDetail").innerHTML = `<div class="card"><h3>${esc(tr.dataset.p)}</h3><div class="scroll"><table><tr><th>Date</th><th class="num">Open</th><th class="num">High</th><th class="num">Low</th><th class="num">Close</th><th class="num hide-sm">Volume</th></tr>
+        ${p.prices.map(x => `<tr><td>${esc(x.date)}</td><td class="num">${num(x.open)}</td><td class="num">${num(x.high)}</td><td class="num">${num(x.low)}</td><td class="num">${num(x.close)}</td><td class="num hide-sm">${num(x.volume, 0)}</td></tr>`).join("")}</table></div>
+        <button class="btn ghost" style="margin-top:12px" id="csv">⬇️ Download CSV</button></div>`;
+      $("#csv").onclick = () => {
+        const rows = [["date", "open", "high", "low", "close", "volume"], ...p.prices.map(x => [x.date, x.open, x.high, x.low, x.close, x.volume])];
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(",")).join("\n")], {type: "text/csv"}));
+        a.download = tr.dataset.p + "_prices.csv"; a.click();
+      };
+      $("#dbDetail").scrollIntoView({behavior: "smooth"});
+    });
+  } catch (e) { el.innerHTML = errBox(e); loaded.db = false; }
+}
+
+// ---------- login & start ----------
+function showLogin() { $("#login").style.display = "grid"; setTimeout(() => $("#pw").focus(), 50); }
+async function tryLogin() {
+  PW = $("#pw").value;
+  try { await api("/api/login"); try { localStorage.setItem("sa_pw", PW); } catch (e) {}
+    $("#login").style.display = "none"; $("#pwErr").style.display = "none"; Object.keys(loaded).forEach(k => loaded[k] = false); load(current());
+  } catch (e) { $("#pwErr").style.display = "block"; }
+}
+$("#pwBtn").onclick = tryLogin;
+$("#pw").addEventListener("keydown", e => e.key === "Enter" && tryLogin());
+
+(async () => {
+  try {
+    const h = await (await fetch("/api/health")).json();
+    $("#srcLabel").textContent = `${h.data} · DB: ${h.database}`;
+    if (h.password_required && !PW) return showLogin();
+  } catch (e) { $("#srcLabel").textContent = "API not reachable"; }
+  load("market");
+})();
+</script>
+</body>
+</html>
