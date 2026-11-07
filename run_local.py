@@ -14,14 +14,8 @@ if os.path.exists(env):
             os.environ.setdefault(k.strip(), v.strip().strip('"'))
 
 import uvicorn                               # noqa: E402
-from fastapi.responses import FileResponse   # noqa: E402
 
 from api.index import app                    # noqa: E402
-
-
-@app.get("/")
-def home():
-    return FileResponse(os.path.join(here, "index.html"))
 
 
 if __name__ == "__main__":

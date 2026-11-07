@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "_co
 
 import pandas as pd                                    # noqa: E402
 from fastapi import Depends, FastAPI, HTTPException, Request   # noqa: E402
-from fastapi.responses import JSONResponse             # noqa: E402
+from fastapi.responses import FileResponse, JSONResponse   # noqa: E402
 from pydantic import BaseModel                         # noqa: E402
 
 import config                                          # noqa: E402
@@ -67,6 +67,16 @@ def strip(r: dict) -> dict:
 
 
 # ---------------------------------------------------------------- routes
+INDEX_HTML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "index.html")
+
+
+@app.get("/", include_in_schema=False)
+def home():
+    """Serves the website itself."""
+    return FileResponse(INDEX_HTML, media_type="text/html",
+                        headers={"Cache-Control": "public, max-age=0, must-revalidate"})
+
+
 @app.get("/api/health")
 def health():
     return ok({"status": "ok", "data": get_source().name,
