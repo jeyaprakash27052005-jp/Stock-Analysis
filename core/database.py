@@ -16,7 +16,7 @@ import config
 
 # On Vercel the only writable folder is /tmp, so a missing DATABASE_URL uses a temporary file.
 _LOCAL = "/tmp/stock_data.db" if os.environ.get("VERCEL") else os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "stock_data.db")
+    os.path.dirname(os.path.abspath(__file__)), "..", "stock_data.db")
 URL = config.DATABASE_URL or f"sqlite:///{os.path.abspath(_LOCAL)}"
 if URL.startswith("postgres://"):
     URL = URL.replace("postgres://", "postgresql://", 1)

@@ -50,9 +50,9 @@ Every `git push` to this repository redeploys automatically.
 ## Project structure
 
 ```
-index.html            website (mobile-first, Plotly charts)
-api/index.py          Python API (FastAPI) – Vercel serverless function
-api/_core/            analysis engine
+public/index.html     website (mobile-first, Plotly charts), served by Vercel CDN
+app.py                Python API (FastAPI) – Vercel entrypoint
+core/                 analysis engine
   indicators.py       EMA, RSI, MACD, Bollinger, ATR, ADX, Supertrend
   signals.py          technical score and stop/target
   fundamentals.py     fundamental score and overall rating

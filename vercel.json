@@ -1,15 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    { "source": "/", "destination": "/api/index" },
-    { "source": "/api/(.*)", "destination": "/api/index" }
-  ],
   "functions": {
-    "api/index.py": {
-      "maxDuration": 60,
-      "includeFiles": "index.html",
-      "excludeFiles": "{.git,**/__pycache__,**/*.db}/**"
-    }
+    "app.py": { "maxDuration": 60 }
   },
   "crons": [{ "path": "/api/scan", "schedule": "15 10 * * 1-5" }]
 }

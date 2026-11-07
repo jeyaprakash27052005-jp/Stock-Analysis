@@ -15,7 +15,7 @@ if os.path.exists(env):
 
 import uvicorn                               # noqa: E402
 
-from api.index import app                    # noqa: E402
+from app import app                          # noqa: E402
 
 
 if __name__ == "__main__":

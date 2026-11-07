@@ -1,6 +1,6 @@
 """
-Stock Analyzer API (FastAPI) — runs as a Vercel Python serverless function.
-All /api/* requests are routed here by vercel.json.
+Stock Analyzer (FastAPI) — Vercel entrypoint.
+The website lives in public/ (served by Vercel's CDN); this file is the /api backend.
 """
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import math
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "_core"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "core"))
 
 import pandas as pd                                    # noqa: E402
 from fastapi import Depends, FastAPI, HTTPException, Request   # noqa: E402
@@ -67,7 +67,7 @@ def strip(r: dict) -> dict:
 
 
 # ---------------------------------------------------------------- routes
-INDEX_HTML = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "index.html")
+INDEX_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "public", "index.html")
 
 
 @app.get("/", include_in_schema=False)
