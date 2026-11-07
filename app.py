@@ -58,7 +58,13 @@ def auth(request: Request):
 
 
 def ready():
-    db.init(config.DEFAULT_WATCHLIST)
+    try:
+        db.init(config.DEFAULT_WATCHLIST)
+    except db.DatabaseNotConfigured as e:
+        raise HTTPException(503, str(e))
+    except Exception as e:
+        raise HTTPException(503, f"Could not connect to Supabase: {type(e).__name__}. "
+                                 "Check DATABASE_URL and your database password.")
     return get_source()
 
 

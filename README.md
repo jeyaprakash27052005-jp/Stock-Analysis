@@ -43,7 +43,7 @@ Every `git push` to this repository redeploys automatically.
 ## Run on your PC
 
 1. Install Python 3.12 (python.org, tick "Add python.exe to PATH").
-2. Copy `.env.example` to `.env` and fill in your values.
+2. Copy `.env.example` to `.env` and fill in your values (`DATABASE_URL` is required — the app uses only Supabase).
 3. Double-click **START_LOCAL.bat** (or `pip install -r requirements-local.txt` then `python run_local.py`).
 4. Open http://127.0.0.1:8000
 
@@ -57,7 +57,7 @@ core/                 analysis engine
   signals.py          technical score and stop/target
   fundamentals.py     fundamental score and overall rating
   data_source.py      Yahoo Finance / demo data
-  database.py         Supabase (Postgres) or local SQLite
+  database.py         Supabase (Postgres)
   engine.py           scan, save, alerts, signal performance
 vercel.json           routing, timeout, daily cron
 ```

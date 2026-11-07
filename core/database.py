@@ -1,11 +1,10 @@
 """
-Database: works with a local file (SQLite) or an online Supabase/Postgres database.
-Tables are created automatically on first run.
+Database: Supabase (Postgres) only. Set DATABASE_URL to your Supabase pooler string.
+Tables are created automatically if they don't exist.
 """
 from __future__ import annotations
 
 import datetime as dt
-import os
 
 import pandas as pd
 from sqlalchemy import (Column, Date, DateTime, Float, Integer, MetaData, String, Table,
@@ -14,16 +13,17 @@ from sqlalchemy.pool import NullPool
 
 import config
 
-# On Vercel the only writable folder is /tmp, so a missing DATABASE_URL uses a temporary file.
-_LOCAL = "/tmp/stock_data.db" if os.environ.get("VERCEL") else os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "stock_data.db")
-URL = config.DATABASE_URL or f"sqlite:///{os.path.abspath(_LOCAL)}"
+
+class DatabaseNotConfigured(RuntimeError):
+    pass
+
+
+URL = (config.DATABASE_URL or "").strip()
 if URL.startswith("postgres://"):
     URL = URL.replace("postgres://", "postgresql://", 1)
 
 # Serverless: open a fresh connection per request through Supabase's pooler.
-engine = (create_engine(URL, poolclass=NullPool) if URL.startswith("postgresql")
-          else create_engine(URL))
+engine = create_engine(URL, poolclass=NullPool) if URL.startswith("postgresql") else None
 meta = MetaData()
 
 watchlist = Table(
@@ -74,6 +74,10 @@ def init(default_watchlist: list[str]) -> None:
     global _ready
     if _ready:
         return
+    if engine is None:
+        raise DatabaseNotConfigured(
+            "Database not connected. Add DATABASE_URL (your Supabase Transaction pooler "
+            "string) in Vercel → Settings → Environment Variables, then redeploy.")
     meta.create_all(engine)
     _ready = True
     with engine.begin() as c:
@@ -82,7 +86,7 @@ def init(default_watchlist: list[str]) -> None:
 
 
 def db_label() -> str:
-    return "Online (Postgres/Supabase)" if engine.dialect.name == "postgresql" else "Local file (SQLite)"
+    return "Supabase" if engine is not None else "Not connected (set DATABASE_URL)"
 
 
 # ---------------- Watchlist ----------------
