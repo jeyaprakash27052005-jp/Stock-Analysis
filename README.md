@@ -13,6 +13,7 @@ alerts, and your own price database in Supabase. Works on phone and PC.
 | 🌐 Market | Nifty 50, Sensex, Bank Nifty, India VIX, 1-year Nifty chart, sector performance, breadth, top gainers/losers |
 | 🔎 Scanner | Watchlist scored −100…+100 with signal, RSI, stop loss and target |
 | 🧠 Analysis | Any NSE stock: overall rating /100, candlestick chart with EMA 20/50/200, Bollinger, volume, MACD, RSI; fundamentals health check, key ratios, yearly revenue/profit, returns and risk |
+| 🔮 Predict & Risk | Monte Carlo simulation (1,000–10,000 future price paths, 1 month–1 year), Value at Risk 95%/99%, chance of gain, moving averages 10/20/50/100, daily-return distribution; **Compare** 2–10 stocks: growth of ₹100, risk vs return, correlation heatmap, VaR/Sharpe/max-fall table |
 | 📜 Signals | Every signal change saved, with result since the call, target/stop hit |
 | ⭐ Watchlist & Alerts | Add/remove stocks; price/RSI/strong-signal alerts (+ optional Telegram) |
 | 🗄️ Database | Daily prices saved in Supabase, downloadable as CSV |
@@ -59,6 +60,7 @@ core/                 analysis engine
   data_source.py      Yahoo Finance / demo data
   database.py         Supabase (Postgres)
   engine.py           scan, save, alerts, signal performance
+  prediction.py       Monte Carlo, Value at Risk, correlation / risk-vs-return
 vercel.json           routing, timeout, daily cron
 ```
 
@@ -70,6 +72,13 @@ vercel.json           routing, timeout, daily cron
 - **Fundamental (0…100):** valuation (P/E, P/B), profitability (ROE, margin), growth (revenue, profit),
   health (debt/equity, current ratio, dividend).
 - **Overall:** 50/50 blend. ≥70 Strong Buy · ≥58 Buy · 42–57 Hold · ≥30 Sell · <30 Strong Sell.
+
+## Prediction & risk
+
+Inspired by the classic *Stock Market Analysis and Prediction* notebook (moving averages,
+return correlation, risk vs expected return, quantile VaR, Monte Carlo VaR), rebuilt for NSE stocks.
+The simulation is geometric Brownian motion using the stock's last year of daily returns. It shows a
+range of possible outcomes, **not a forecast**. These tools don't need the database.
 
 ## Security
 

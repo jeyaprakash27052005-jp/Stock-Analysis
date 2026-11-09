@@ -21,6 +21,7 @@ import engine                                          # noqa: E402
 from data_source import get_source                     # noqa: E402
 from fundamentals import analyze_fundamentals, combined_rating   # noqa: E402
 from signals import analyze                            # noqa: E402
+import prediction                                      # noqa: E402
 
 app = FastAPI(title="Stock Analyzer API")
 
@@ -260,3 +261,40 @@ def prices(symbol: str | None = None):
         return ok({"prices": db.get_saved_prices(symbol.upper())
                    .sort_values("date", ascending=False).to_dict("records")})
     return ok({"stats": db.price_history_stats().to_dict("records")})
+
+
+# ---------------------------------------------------------------- prediction & risk
+@app.get("/api/predict/{symbol}", dependencies=[Depends(auth)])
+def predict(symbol: str, days: int = 60, runs: int = 5000):
+    """Monte Carlo simulation + historical risk for one stock (no database needed)."""
+    sym = symbol.strip().upper()
+    try:
+        hist = get_source().history(sym)
+    except Exception as e:
+        raise HTTPException(404, str(e))
+    if len(hist) < 60:
+        raise HTTPException(404, f"{sym}: not enough history")
+    try:
+        mc = prediction.monte_carlo(hist["close"], days=days, runs=runs)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return ok({"symbol": sym, "simulation": mc, "history": prediction.history_stats(hist)})
+
+
+@app.get("/api/compare", dependencies=[Depends(auth)])
+def compare(symbols: str):
+    """Correlation, risk vs return and VaR for 2–10 stocks (comma-separated)."""
+    syms = list(dict.fromkeys(s.strip().upper() for s in symbols.split(",") if s.strip()))[:10]
+    if len(syms) < 2:
+        raise HTTPException(400, "Enter at least 2 symbols")
+    data = get_source().bulk_history(syms)
+    missing = [s for s in syms if s not in data]
+    closes = {s: df["close"] for s, df in data.items()}
+    if len(closes) < 2:
+        raise HTTPException(404, "Could not load at least 2 of those symbols")
+    try:
+        out = prediction.compare(closes)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    out["missing"] = missing
+    return ok(out)

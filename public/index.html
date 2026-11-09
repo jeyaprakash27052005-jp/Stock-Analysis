@@ -90,6 +90,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
     <button data-v="market" class="on">🌐 Market</button>
     <button data-v="scan">🔎 Scanner</button>
     <button data-v="stock">🧠 Analysis</button>
+    <button data-v="predict">🔮 Predict & Risk</button>
     <button data-v="signals">📜 Signals</button>
     <button data-v="watch">⭐ Watchlist & Alerts</button>
     <button data-v="db">🗄️ Database</button>
@@ -106,6 +107,25 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
       <button class="btn" id="go">Analyse</button>
     </div></div>
     <div id="stockOut"><div class="loading">Search any NSE stock, or tap one in the Scanner.</div></div>
+  </section>
+  <section class="view" id="v-predict">
+    <div class="sub" id="predTabs"><button data-p="mc" class="on">🎲 Monte Carlo</button><button data-p="cmp">🔗 Compare stocks</button></div>
+    <div id="p-mc">
+      <div class="card"><div class="row">
+        <input id="pSym" list="symlist" placeholder="NSE symbol, e.g. INFY" style="flex:1;text-transform:uppercase">
+        <select id="pDays"><option value="20">1 month</option><option value="60" selected>3 months</option><option value="126">6 months</option><option value="252">1 year</option></select>
+        <select id="pRuns"><option value="1000">1,000 runs</option><option value="5000" selected>5,000 runs</option><option value="10000">10,000 runs</option></select>
+        <button class="btn" id="pGo">Simulate</button>
+      </div></div>
+      <div id="predOut"><div class="loading">Pick a stock to simulate thousands of possible future price paths and estimate Value at Risk.</div></div>
+    </div>
+    <div id="p-cmp" style="display:none">
+      <div class="card"><div class="row">
+        <input id="cSyms" placeholder="TCS, INFY, WIPRO, HCLTECH" style="flex:1;text-transform:uppercase">
+        <button class="btn" id="cGo">Compare</button>
+      </div><p class="muted" style="font-size:12px;margin:8px 0 0">2–10 stocks. Uses the last year of daily returns.</p></div>
+      <div id="cmpOut"></div>
+    </div>
   </section>
   <section class="view" id="v-signals"></section>
   <section class="view" id="v-watch"></section>
@@ -147,6 +167,7 @@ const IST = d => new Date(d.endsWith("Z") || d.includes("+") ? d : d + "Z").toLo
 const PLOT = {paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", font: {color: "#8b97b0", family: "Inter", size: 11},
   margin: {l: 40, r: 10, t: 10, b: 30}, showlegend: true, legend: {orientation: "h", y: 1.08, x: 0},
   xaxis: {gridcolor: "#1c2740", rangeslider: {visible: false}}, yaxis: {gridcolor: "#1c2740"}};
+const P = () => JSON.parse(JSON.stringify(PLOT));  // fresh copy: Plotly mutates layout objects
 const CFG = {displayModeBar: false, responsive: true};
 
 // ---------- tabs ----------
@@ -160,9 +181,9 @@ const current = () => document.querySelector("#tabs button.on").dataset.v;
 function load(v, force = false) {
   if (loaded[v] && !force) return;
   loaded[v] = true;
-  ({market: loadMarket, scan: loadScan, signals: loadSignals, watch: loadWatch, db: loadDb, stock: () => {}})[v]();
+  ({market: loadMarket, scan: loadScan, signals: loadSignals, watch: loadWatch, db: loadDb, stock: () => {}, predict: () => {}})[v]();
 }
-$("#refresh").onclick = () => { const v = current(); v === "stock" && $("#sym").value ? analyse($("#sym").value) : load(v, true); };
+$("#refresh").onclick = () => { const v = current(); v === "stock" && $("#sym").value ? analyse($("#sym").value) : v === "predict" ? ($("#p-mc").style.display !== "none" ? $("#pGo").click() : $("#cGo").click()) : load(v, true); };
 
 // ---------- market ----------
 async function loadMarket() {
@@ -189,11 +210,11 @@ async function loadMarket() {
       const n = m.nifty;
       Plotly.newPlot("niftyChart", [
         {type: "candlestick", x: n.dates, open: n.open, high: n.high, low: n.low, close: n.close, name: "NIFTY", increasing: {line: {color: "#16c784"}}, decreasing: {line: {color: "#ea3943"}}},
-        {type: "scatter", x: n.dates, y: n.ema50, name: "50 EMA", line: {color: "#f5a524", width: 1.3}}], {...PLOT, height: 320}, CFG);
+        {type: "scatter", x: n.dates, y: n.ema50, name: "50 EMA", line: {color: "#f5a524", width: 1.3}}], {...P(), height: 320}, CFG);
     }
     if (sect.length) Plotly.newPlot("sectChart", [{type: "bar", orientation: "h", y: sect.map(s => s.name.replace("NIFTY ", "")), x: sect.map(s => s.change_pct),
       marker: {color: sect.map(s => s.change_pct >= 0 ? "#16c784" : "#ea3943")}, text: sect.map(s => (s.change_pct > 0 ? "+" : "") + s.change_pct.toFixed(2) + "%"), textposition: "outside", showlegend: false}],
-      {...PLOT, height: 300, margin: {l: 70, r: 40, t: 10, b: 30}, showlegend: false}, CFG);
+      {...P(), height: 300, margin: {l: 70, r: 40, t: 10, b: 30}, showlegend: false}, CFG);
   } catch (e) { el.innerHTML = errBox(e); loaded.market = false; }
 }
 
@@ -275,7 +296,7 @@ async function analyse(sym) {
       {type: "bar", x: c.dates, y: c.volume, name: "Volume", marker: {color: c.close.map((v, i) => v >= c.open[i] ? "#16c78466" : "#ea394366")}, yaxis: "y2", showlegend: false},
       {type: "bar", x: c.dates, y: c.macd_hist, name: "MACD", marker: {color: c.macd_hist.map(v => v >= 0 ? "#16c784" : "#ea3943")}, yaxis: "y3", showlegend: false},
       {x: c.dates, y: c.rsi, name: "RSI", line: {color: "#b37bff", width: 1.2}, yaxis: "y4", showlegend: false},
-    ], {...PLOT, height: 620,
+    ], {...P(), height: 620,
       yaxis: {domain: [.45, 1], gridcolor: "#1c2740"}, yaxis2: {domain: [.32, .43], gridcolor: "#1c2740", title: {text: "Vol", font: {size: 10}}},
       yaxis3: {domain: [.17, .3], gridcolor: "#1c2740", title: {text: "MACD", font: {size: 10}}}, yaxis4: {domain: [0, .15], range: [0, 100], gridcolor: "#1c2740", title: {text: "RSI", font: {size: 10}}},
       shapes: [70, 30].map(v => ({type: "line", xref: "paper", x0: 0, x1: 1, yref: "y4", y0: v, y1: v, line: {color: v === 70 ? "#ea3943" : "#16c784", dash: "dash", width: 1}}))}, CFG);
@@ -287,17 +308,108 @@ async function analyse(sym) {
       if (b.dataset.p === "fund" && s.yearly && !$("#yrChart").dataset.done) {
         $("#yrChart").dataset.done = 1;
         const y = s.yearly, series = [["Total Revenue", "#4c8dff"], ["Net Income", "#16c784"]].filter(([k]) => y[k]);
-        Plotly.newPlot("yrChart", series.map(([k, col]) => ({type: "bar", x: y.years, y: y[k], name: k, marker: {color: col}})), {...PLOT, height: 280, barmode: "group"}, CFG);
+        Plotly.newPlot("yrChart", series.map(([k, col]) => ({type: "bar", x: y.years, y: y[k], name: k, marker: {color: col}})), {...P(), height: 280, barmode: "group"}, CFG);
       }
       if (b.dataset.p === "ret" && !$("#retChart").dataset.done) {
         $("#retChart").dataset.done = 1;
         Plotly.newPlot("retChart", [{type: "bar", x: s.returns.map(r => r.period), y: s.returns.map(r => r.pct), marker: {color: s.returns.map(r => r.pct >= 0 ? "#16c784" : "#ea3943")},
-          text: s.returns.map(r => (r.pct > 0 ? "+" : "") + r.pct.toFixed(1) + "%"), textposition: "outside", showlegend: false}], {...PLOT, height: 280, showlegend: false}, CFG);
+          text: s.returns.map(r => (r.pct > 0 ? "+" : "") + r.pct.toFixed(1) + "%"), textposition: "outside", showlegend: false}], {...P(), height: 280, showlegend: false}, CFG);
       }
       window.dispatchEvent(new Event("resize"));
     };
     const add = $("#addW");
     if (add) add.onclick = async () => { await api("/api/watchlist", {method: "POST", body: JSON.stringify({symbols: [s.symbol]})}); add.remove(); loaded.scan = loaded.watch = false; };
+  } catch (e) { el.innerHTML = errBox(e); }
+}
+
+// ---------- prediction & risk ----------
+$("#predTabs").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("#predTabs button").forEach(x => x.classList.toggle("on", x === b));
+  ["mc", "cmp"].forEach(p => $("#p-" + p).style.display = p === b.dataset.p ? "block" : "none");
+  window.dispatchEvent(new Event("resize"));
+};
+$("#pGo").onclick = () => predict($("#pSym").value);
+$("#pSym").addEventListener("keydown", e => e.key === "Enter" && predict($("#pSym").value));
+
+async function predict(sym) {
+  sym = (sym || "").trim().toUpperCase(); if (!sym) return;
+  const el = $("#predOut"); el.innerHTML = loading(`Simulating ${esc(sym)}…`);
+  try {
+    const r = await api(`/api/predict/${encodeURIComponent(sym)}?days=${$("#pDays").value}&runs=${$("#pRuns").value}`);
+    const m = r.simulation, h = r.history, S = m.start_price;
+    const chg = v => pct((v / S - 1) * 100);
+    el.innerHTML = `
+      <div class="card"><h3>${esc(r.symbol)} · ${num(m.runs, 0)} simulations, ${m.days} trading days ahead</h3>
+        <div class="grid">
+          ${stat("Today", inr(S))}${stat("Expected (mean)", inr(m.expected_price), chg(m.expected_price))}${stat("Median", inr(m.median_price), chg(m.median_price))}
+          ${stat("Chance of gain", num(m.prob_gain_pct, 0) + "%")}${stat("Best 5%", inr(m.best_5pct), chg(m.best_5pct))}${stat("Worst 5%", inr(m.worst_5pct), chg(m.worst_5pct))}
+          ${stat("Up > 10%", num(m.prob_up10_pct, 0) + "%")}${stat("Down > 10%", num(m.prob_down10_pct, 0) + "%")}
+        </div></div>
+      <div class="card"><h3>Possible price paths</h3><div id="mcPaths" class="chart"></div>
+        <p class="muted" style="font-size:12px;margin:6px 0 0">Shaded bands: 5–95% and 25–75% of outcomes. Thin lines: sample paths.</p></div>
+      <div class="card"><h3>Final price distribution</h3><div id="mcHist" class="chart"></div></div>
+      <div class="card"><h3>Value at Risk (per share)</h3><div class="grid">
+        ${stat(`MC VaR 95% · ${m.days}d`, `<span class="down">${inr(m.var95)}</span>`, num(m.var95 / S * 100, 1) + "% of price")}
+        ${stat(`MC VaR 99% · ${m.days}d`, `<span class="down">${inr(m.var99)}</span>`, num(m.var99 / S * 100, 1) + "% of price")}
+        ${stat("1-day VaR 95% (hist.)", pct(h.hist_var95_pct))}${stat("1-day VaR 99% (hist.)", pct(h.hist_var99_pct))}
+        ${stat("Daily volatility", num(m.daily_vol_pct, 2) + "%")}${stat("Annual volatility", num(m.annual_vol_pct, 1) + "%")}
+        ${stat("Best day (1Y)", pct(h.best_day_pct))}${stat("Worst day (1Y)", pct(h.worst_day_pct))}
+      </div><p class="muted" style="font-size:12px;margin:10px 0 0">VaR 95% = with 95% confidence, loss per share should not exceed this amount over the period (if the past behaviour repeats).</p></div>
+      <div class="card"><h3>Price & moving averages (1Y)</h3><div id="maChart" class="chart"></div></div>
+      <div class="card"><h3>Daily return distribution (1Y)</h3><div id="retHist" class="chart"></div></div>
+      <div class="card muted" style="font-size:13px">Model: geometric Brownian motion using this stock's last ${m.lookback} days of returns (daily drift ${num(m.daily_drift_pct, 3)}%). It shows a range of possibilities, not a forecast.</div>`;
+
+    const x = [...Array(m.days + 1).keys()], B = m.bands;
+    const band = (lo, hi, col, name) => [
+      {x, y: lo, line: {width: 0}, showlegend: false, hoverinfo: "skip"},
+      {x, y: hi, fill: "tonexty", fillcolor: col, line: {width: 0}, name}];
+    Plotly.newPlot("mcPaths", [
+      ...m.sample_paths.map(p => ({x, y: p, line: {width: .6, color: "#4c8dff55"}, showlegend: false, hoverinfo: "skip"})),
+      ...band(B.p5, B.p95, "rgba(76,141,255,.15)", "5–95%"), ...band(B.p25, B.p75, "rgba(76,141,255,.3)", "25–75%"),
+      {x, y: B.p50, name: "Median", line: {color: "#f5a524", width: 2}}],
+      {...P(), height: 340, xaxis: {...P().xaxis, title: {text: "Trading days ahead"}}}, CFG);
+    Plotly.newPlot("mcHist", [{type: "bar", x: m.histogram.x, y: m.histogram.y, marker: {color: m.histogram.x.map(v => v < m.worst_1pct ? "#ea3943" : v >= S ? "#16c784" : "#d9822b")}, showlegend: false}],
+      {...P(), height: 280, showlegend: false, bargap: 0,
+       shapes: [[S, "#e6ebf5"], [m.worst_1pct, "#ea3943"]].map(([v, c]) => ({type: "line", x0: v, x1: v, yref: "paper", y0: 0, y1: 1, line: {color: c, dash: "dash", width: 1.5}})),
+       annotations: [{x: S, yref: "paper", y: 1, text: "Today", showarrow: false, font: {color: "#e6ebf5"}}, {x: m.worst_1pct, yref: "paper", y: .9, text: "q(0.99)", showarrow: false, font: {color: "#ea3943"}}]}, CFG);
+    Plotly.newPlot("maChart", [
+      {x: h.dates, y: h.close, name: "Close", line: {color: "#e6ebf5", width: 1.4}},
+      ...[["ma10", "#4c8dff"], ["ma20", "#16c784"], ["ma50", "#f5a524"], ["ma100", "#b37bff"]].map(([k, c]) => ({x: h.dates, y: h[k], name: k.toUpperCase().replace("MA", "MA "), line: {color: c, width: 1}}))],
+      {...P(), height: 320}, CFG);
+    Plotly.newPlot("retHist", [{type: "bar", x: h.returns_hist.x, y: h.returns_hist.y, marker: {color: h.returns_hist.x.map(v => v >= 0 ? "#16c784" : "#ea3943")}, showlegend: false}],
+      {...P(), height: 260, showlegend: false, bargap: 0, xaxis: {...P().xaxis, title: {text: "Daily return %"}}}, CFG);
+  } catch (e) { el.innerHTML = errBox(e); }
+}
+
+$("#cGo").onclick = () => compareStocks($("#cSyms").value);
+$("#cSyms").addEventListener("keydown", e => e.key === "Enter" && compareStocks($("#cSyms").value));
+
+async function compareStocks(txt) {
+  const syms = (txt || "").split(/[,\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean); if (syms.length < 2) return;
+  const el = $("#cmpOut"); el.innerHTML = loading("Comparing…");
+  try {
+    const r = await api("/api/compare?symbols=" + encodeURIComponent(syms.join(",")));
+    const S = r.symbols, C = ["#4c8dff", "#16c784", "#f5a524", "#b37bff", "#ea3943", "#2ec4d6", "#ff7ab6", "#a3e635", "#f97316", "#94a3b8"];
+    el.innerHTML = `
+      ${r.missing.length ? `<div class="err">⚠️ Not found: ${esc(r.missing.join(", "))}</div>` : ""}
+      <div class="card"><h3>Growth of ₹100 (${r.days} days)</h3><div id="cGrowth" class="chart"></div></div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+        <div class="card"><h3>Risk vs expected return</h3><div id="cRisk" class="chart"></div></div>
+        <div class="card"><h3>Return correlation</h3><div id="cCorr" class="chart"></div></div>
+      </div>
+      <div class="card"><h3>Risk table</h3><div class="scroll"><table>
+        <tr><th>Stock</th><th class="num">Period return</th><th class="num">Annual return</th><th class="num">Annual vol</th><th class="num">Sharpe</th><th class="num">1d VaR 95%</th><th class="num">1d VaR 99%</th><th class="num">Max fall</th></tr>
+        ${r.stats.map(x => `<tr class="click" data-s="${esc(x.symbol)}"><td><b>${esc(x.symbol)}</b></td><td class="num">${pct(x.period_return_pct)}</td><td class="num">${pct(x.annual_return_pct)}</td>
+          <td class="num">${num(x.annual_vol_pct, 1)}%</td><td class="num">${num(x.sharpe)}</td><td class="num">${pct(x.var95_pct)}</td><td class="num">${pct(x.var99_pct)}</td><td class="num">${pct(x.max_drawdown_pct)}</td></tr>`).join("")}
+      </table></div><p class="muted" style="font-size:12px;margin:10px 0 0">Correlation near +1 = stocks move together (less diversification). 1d VaR 95% = on 95% of days the loss was smaller than this.</p></div>`;
+    Plotly.newPlot("cGrowth", S.map((s, i) => ({x: r.growth.dates, y: r.growth[s], name: s, line: {color: C[i % C.length], width: 1.4}})), {...P(), height: 320}, CFG);
+    Plotly.newPlot("cRisk", [{type: "scatter", mode: "markers+text", x: r.stats.map(s => s.risk_daily_pct), y: r.stats.map(s => s.mean_daily_pct), text: r.stats.map(s => s.symbol), textposition: "top center",
+      marker: {size: 14, color: S.map((_, i) => C[i % C.length])}, showlegend: false}],
+      {...P(), height: 320, showlegend: false, xaxis: {...P().xaxis, title: {text: "Risk (daily std %)"}}, yaxis: {...P().yaxis, title: {text: "Expected daily return %"}}}, CFG);
+    Plotly.newPlot("cCorr", [{type: "heatmap", z: r.correlation, x: S, y: S, zmin: -1, zmax: 1, colorscale: [[0, "#ea3943"], [.5, "#18223a"], [1, "#4c8dff"]],
+      text: r.correlation.map(row => row.map(v => v.toFixed(2))), texttemplate: "%{text}", showscale: false}],
+      {...P(), height: 320, margin: {l: 80, r: 10, t: 10, b: 60}, yaxis: {autorange: "reversed"}}, CFG);
   } catch (e) { el.innerHTML = errBox(e); }
 }
 
