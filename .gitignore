@@ -19,3 +19,7 @@ local.properties
 
 # Firebase CLI logs
 *-debug.log
+
+# Lite APK build output is published in the repo
+!releases/stormdrop-royale-lite.apk
+lite/.tools/
