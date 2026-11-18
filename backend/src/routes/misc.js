@@ -1,15 +1,28 @@
 import { Router } from "express";
 import { config } from "../config.js";
-import { HttpError, one, query } from "../db.js";
+import { ensureSchema, HttpError, one, query } from "../db.js";
 import { requireCron, requirePlayer } from "../lib/auth.js";
 import { rankInfo } from "../lib/ranks.js";
 
 const r = Router();
 
 r.get("/health", async (_req, res) => {
-  let database = "not configured";
-  try { await one("select 1"); database = "connected"; } catch (e) { database = `error: ${e.message}`; }
-  res.json({ status: "ok", service: "stormdrop-backend", database });
+  const out = { status: "ok", service: "stormdrop-backend", database: "not configured (set DATABASE_URL)", tables: null,
+                apkConfigured: true, apk: "/download" };
+  if (process.env.DATABASE_URL) {
+    try {
+      await one("select 1");
+      out.database = "connected";
+      try {
+        out.tables = await ensureSchema();
+        out.players = (await one("select count(*)::int n from players where deleted_at is null")).n;
+        out.serversOnline = (await one("select count(*)::int n from game_servers where last_heartbeat > now() - interval '1 minute'")).n;
+      } catch (e) { out.tables = `setup failed: ${e.message}`; }
+    } catch (e) {
+      out.database = `error: ${e.code || e.message}`;
+    }
+  }
+  res.set("Cache-Control", "no-store").json(out);
 });
 
 r.get("/leaderboard", async (req, res) => {
@@ -63,6 +76,7 @@ r.get("/cron/cleanup", requireCron, async (_req, res) => {
   out.matches = (await query("update matches set status='abandoned' where status in ('allocated','running') and created_at < now() - interval '2 hours'")).rowCount;
   out.invites = (await query("delete from party_invites where created_at < now() - interval '1 day'")).rowCount;
   out.chat = (await query("delete from chat_messages where created_at < now() - interval '30 days'")).rowCount;
+  out.deletedAccounts = (await one("select purge_inactive_players($1) n", [config.inactiveDeleteDays])).n;
   res.json({ ok: true, ...out });
 });
 

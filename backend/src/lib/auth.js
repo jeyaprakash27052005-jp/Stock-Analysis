@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { config } from "../config.js";
-import { HttpError, one } from "../db.js";
+import { HttpError, one, query } from "../db.js";
 
 function secret() {
   if (!config.jwtSecret) throw new HttpError(503, "JWT_SECRET is not set on the server.");
@@ -31,6 +31,8 @@ export async function requirePlayer(req, _res, next) {
     if (!p || p.deleted_at) throw new HttpError(401, "Account not found");
     if (p.is_banned) throw new HttpError(403, `Account banned: ${p.ban_reason || "violation of terms"}`);
     req.playerId = p.id;
+    // Activity heartbeat (at most once an hour) — accounts unused for 30 days are deleted automatically.
+    await query("update players set last_active_at = now() where id = $1 and last_active_at < now() - interval '1 hour'", [p.id]);
     next();
   } catch (e) { next(e); }
 }

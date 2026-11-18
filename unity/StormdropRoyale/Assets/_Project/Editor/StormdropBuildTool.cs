@@ -170,6 +170,48 @@ namespace Stormdrop.EditorTools
             if (report.summary.result == BuildResult.Succeeded) VersionCode++;   // ready for the next upload
         }
 
+        /// <summary>
+        /// CI entry point (GitHub Actions / game-ci): runs the setup wizard if the content doesn't exist yet,
+        /// then builds an installable APK to build/Android/stormdrop.apk. Signed with the release keystore when
+        /// STORMDROP_KEYSTORE_BASE64 / STORMDROP_KEYSTORE_PASS / STORMDROP_KEY_ALIAS are set, otherwise with the debug key.
+        /// </summary>
+        public static void BuildApkCI()
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameDatabase>("Assets/_Project/Resources/GameDatabase.asset") == null || Scenes().Length < 2)
+                StormdropSetupWizard.Run();
+            var api = Environment.GetEnvironmentVariable("STORMDROP_API");
+            if (!string.IsNullOrEmpty(api))
+            {
+                var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(Scenes()[0]);
+                var boot = UnityEngine.Object.FindFirstObjectByType<GameBootstrap>();
+                if (boot != null) { boot.apiBaseUrl = api; EditorUtility.SetDirty(boot); UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene); }
+            }
+            var code = Environment.GetEnvironmentVariable("STORMDROP_VERSION_CODE");
+            if (int.TryParse(code, out var vc)) VersionCode = vc;
+            ApplyPlayerSettings();
+
+            var ks64 = Environment.GetEnvironmentVariable("STORMDROP_KEYSTORE_BASE64");
+            if (!string.IsNullOrEmpty(ks64))
+            {
+                var ksPath = Path.GetFullPath("upload.keystore");
+                File.WriteAllBytes(ksPath, Convert.FromBase64String(ks64));
+                var pass = Environment.GetEnvironmentVariable("STORMDROP_KEYSTORE_PASS");
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = ksPath;
+                PlayerSettings.Android.keystorePass = pass;
+                PlayerSettings.Android.keyaliasName = Environment.GetEnvironmentVariable("STORMDROP_KEY_ALIAS") ?? "stormdrop";
+                PlayerSettings.Android.keyaliasPass = Environment.GetEnvironmentVariable("STORMDROP_KEY_PASS") ?? pass;
+            }
+            else PlayerSettings.Android.useCustomKeystore = false;
+
+            EditorUserBuildSettings.buildAppBundle = Environment.GetEnvironmentVariable("STORMDROP_AAB") == "1";
+            Directory.CreateDirectory("build/Android");
+            string path = EditorUserBuildSettings.buildAppBundle ? "build/Android/stormdrop.aab" : "build/Android/stormdrop.apk";
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = Scenes(), locationPathName = path, target = BuildTarget.Android });
+            Debug.Log($"[Stormdrop] CI build {report.summary.result}: {path}");
+            if (Application.isBatchMode) EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 1);
+        }
+
         [MenuItem("Stormdrop/4. Build Dedicated Server (Linux)", priority = 22)]
         public static void BuildServer()
         {

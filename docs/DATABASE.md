@@ -41,6 +41,14 @@ so no data is lost; uncomment the `drop table` line at the top of `schema.sql` a
 | Compliance | `deletion_requests` | Requests from the public account-deletion page |
 | View | `leaderboard_br` | Regional BR ranking (security_invoker, respects RLS) |
 
+## Automatic deletion (30 days)
+
+- Every signed-in API call refreshes `players.last_active_at` (at most once an hour).
+- `purge_inactive_players(30)` permanently deletes accounts unused for 30 days (an uninstalled app never calls the
+  API again) and accounts deleted in the app. Guild leadership passes on; purchases stay without the player link.
+- It runs every day at 21:15 UTC via **pg_cron inside Supabase** (`db/jobs.sql`) and again from the Vercel Cron
+  (`/api/cron/cleanup`). Change the period with `INACTIVE_DELETE_DAYS` (Vercel) and the number in `jobs.sql`.
+
 ## Common admin queries
 
 ```sql

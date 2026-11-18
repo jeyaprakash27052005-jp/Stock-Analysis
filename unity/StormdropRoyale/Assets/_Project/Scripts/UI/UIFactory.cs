@@ -50,7 +50,12 @@ namespace Stormdrop
         public static void EnsureEventSystem()
         {
             if (EventSystem.current != null) return;
-            var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var es = new GameObject("EventSystem", typeof(EventSystem));
+#if ENABLE_LEGACY_INPUT_MANAGER
+            es.AddComponent<StandaloneInputModule>();
+#else
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+#endif
             UnityEngine.Object.DontDestroyOnLoad(es);
         }
 

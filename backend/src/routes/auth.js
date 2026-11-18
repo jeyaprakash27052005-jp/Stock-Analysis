@@ -42,7 +42,7 @@ async function loginWith(provider, uid, name, region) {
     await c.query("insert into auth_identities (provider, provider_uid, player_id) values ($1,$2,$3)", [provider, uid, id]);
     return id;
   });
-  const p = await one("update players set last_login_at = now() where id=$1 returning is_banned, ban_reason", [playerId]);
+  const p = await one("update players set last_login_at = now(), last_active_at = now() where id=$1 returning is_banned, ban_reason", [playerId]);
   if (p.is_banned) throw new HttpError(403, `Account banned: ${p.ban_reason || "violation of terms"}`);
   return { token: signSession(playerId), profile: await getProfile(playerId) };
 }

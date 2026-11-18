@@ -13,3 +13,5 @@ label { display:block; margin: 12px 0 4px; font-weight: 600; }
 input, textarea { width:100%; padding:10px; border-radius:8px; border:1px solid #444b; background:var(--bg); color:var(--text); font:inherit; }
 button { margin-top:16px; background:var(--accent); color:#111; border:0; border-radius:8px; padding:12px 20px; font-weight:700; font-size:1rem; cursor:pointer; }
 table { border-collapse: collapse; width: 100%; } td, th { text-align:left; padding:6px 8px; border-bottom:1px solid #8883; vertical-align: top; }
+.btn { display:inline-block; background:var(--accent); color:#111; text-decoration:none; font-weight:700; padding:12px 22px; border-radius:8px; }
+.ok { color:#2fbf5b; font-weight:600; } .bad { color:#e5484d; font-weight:600; }

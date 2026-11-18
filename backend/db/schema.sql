@@ -34,8 +34,11 @@ create table if not exists players (
   ban_reason       text,
   created_at       timestamptz not null default now(),
   last_login_at    timestamptz not null default now(),
+  last_active_at   timestamptz not null default now(),   -- any API use; drives the 30-day inactivity deletion
   deleted_at       timestamptz
 );
+alter table players add column if not exists last_active_at timestamptz not null default now();
+create index if not exists players_last_active_idx on players (last_active_at);
 create index if not exists players_br_rank_idx on players (region, br_rank_points desc) where deleted_at is null;
 create index if not exists players_nickname_idx on players (lower(nickname));
 
@@ -114,7 +117,7 @@ create index if not exists currency_ledger_player_idx on currency_ledger (player
 -- Real-money purchases (Google Play / App Store)
 create table if not exists purchases (
   id              uuid primary key default gen_random_uuid(),
-  player_id       uuid not null references players(id) on delete cascade,
+  player_id       uuid references players(id) on delete set null,   -- kept (anonymised) for tax records
   platform        text not null check (platform in ('google_play','app_store')),
   product_id      text not null,
   order_id        text,
@@ -124,6 +127,11 @@ create table if not exists purchases (
   raw             jsonb,
   created_at      timestamptz not null default now()
 );
+
+-- Older databases: keep purchase rows when an account is deleted
+alter table purchases alter column player_id drop not null;
+alter table purchases drop constraint if exists purchases_player_id_fkey;
+alter table purchases add constraint purchases_player_id_fkey foreign key (player_id) references players(id) on delete set null;
 
 -- ---------------------------------------------------------------- social
 create table if not exists friendships (
@@ -426,3 +434,39 @@ end $$;
 
 -- The view runs with the caller's rights so RLS still applies through it
 alter view leaderboard_br set (security_invoker = true);
+
+-- ---------------------------------------------------------------- automatic account deletion
+-- Permanently deletes (1) accounts not used for `inactive_days` days — e.g. the player uninstalled
+-- the app — and (2) accounts the player deleted in the app. Guild leadership passes to another
+-- member; purchase records are kept without the player link (tax law). Runs daily (see db/jobs.sql
+-- and the /api/cron/cleanup Vercel cron). Returns the number of accounts deleted.
+create or replace function purge_inactive_players(inactive_days int default 30)
+returns int language plpgsql security definer set search_path = public as $$
+declare victims uuid[]; n int;
+begin
+  select array_agg(id) into victims from players
+   where deleted_at is not null or last_active_at < now() - make_interval(days => inactive_days);
+  if victims is null then return 0; end if;
+
+  -- hand guild leadership to a remaining member (officers first), otherwise the guild is removed
+  update guilds g set leader_id = x.next_leader
+  from (select distinct on (gm.guild_id) gm.guild_id, gm.player_id as next_leader
+        from guild_members gm where gm.player_id <> all(victims)
+        order by gm.guild_id, case gm.role when 'officer' then 0 else 1 end, gm.joined_at) x
+  where g.id = x.guild_id and g.leader_id = any(victims);
+  update guild_members gm set role = 'leader' from guilds g
+   where g.id = gm.guild_id and g.leader_id = gm.player_id and gm.role <> 'leader';
+  update players set guild_id = null where guild_id in (select id from guilds where leader_id = any(victims));
+  delete from guilds where leader_id = any(victims);
+
+  delete from players where id = any(victims);   -- everything else cascades
+  get diagnostics n = row_count;
+  return n;
+end $$;
+-- Only the backend/database owner may run it (never exposed through the public Supabase API)
+revoke execute on function purge_inactive_players(int) from public;
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke execute on function purge_inactive_players(int) from anon, authenticated';
+  end if;
+end $$;

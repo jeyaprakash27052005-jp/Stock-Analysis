@@ -29,11 +29,12 @@ All branding, characters, items and names are original.
 ## Quick start
 
 1. **Database:** `cd backend && cp .env.example .env` (add your Supabase `DATABASE_URL`) → `npm install && npm run db:setup`
-2. **API:** Vercel → Root Directory `backend` → add the env vars from `.env.example` → deploy → open `/api/health`
+2. **Website + API:** import the repo in Vercel (no settings needed) → add `DATABASE_URL`, `JWT_SECRET`, `SERVER_SECRET` → deploy → the home page shows *Database connected*
 3. **Game:** Unity Hub → *Add project from disk* → `unity/StormdropRoyale` → **Stormdrop ▸ 1. Run Setup Wizard** →
    restart the editor → set the API URL on *GameBootstrap* → Play → *Play as Guest* → *Training Ground* → START
-4. **Matches:** build the Linux server and run it with Docker (`docs/SETUP.md` §4)
-5. **Publish:** `play-store/RELEASE_CHECKLIST.md`
+4. **APK:** GitHub → Actions → *Build Android APK* (`docs/SETUP.md` §5) — the site's Download button links to it
+5. **Matches:** build the Linux server and run it with Docker (`docs/SETUP.md` §4)
+6. **Publish:** `play-store/RELEASE_CHECKLIST.md`
 
 Full instructions: **[docs/SETUP.md](docs/SETUP.md)**.
 

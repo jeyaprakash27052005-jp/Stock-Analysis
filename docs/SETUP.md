@@ -38,32 +38,39 @@ To remove the old stock tables once you don't need that data, uncomment the `dro
 
 ---
 
-## 2. Backend API (Vercel — same account as before)
+## 2. Backend API + website (Vercel — same account as before)
 
-1. Vercel → your existing project (or **Add New → Project** and import this repo).
-2. **Settings → General → Root Directory = `backend`**. Framework preset: **Other**.
-3. **Settings → Environment Variables** (Production + Preview):
+No special Vercel settings are needed. Either way works:
+- **Root Directory empty** (repository root) — `vercel.json` + `api/index.js` at the root send everything to the backend, or
+- **Root Directory = `backend`** — Vercel detects the Express app in `backend/src/app.js`.
 
-   | Name | Value |
-   |---|---|
-   | `DATABASE_URL` | Supabase → Connect → **Transaction pooler** string (port 6543) with your DB password |
-   | `JWT_SECRET` | long random string (`openssl rand -hex 32`) |
-   | `SERVER_SECRET` | another long random string — also given to your dedicated servers |
-   | `CRON_SECRET` | another random string (Vercel Cron sends it automatically) |
-   | `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_WEB_CLIENT_SECRET` | step 6a |
-   | `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | step 6b (optional) |
-   | `ANDROID_PACKAGE_NAME` | e.g. `com.yourstudio.stormdrop` |
-   | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | step 6c |
-   | `SUPPORT_EMAIL` | your support address |
+The Express app itself serves the website (`/`, `/privacy`, `/terms`, `/delete-account`), the APK link (`/download`)
+and the API (`/api/...`). The **game tables are created automatically** the first time the API meets an empty database.
 
-   Remove the old variables `APP_PASSWORD`, `DATA_MODE`, `TELEGRAM_*` — they are no longer used.
-4. Redeploy. Edit `backend/public/privacy.html` and `terms.html` (studio name, email) before going public.
+**Environment Variables** (Vercel → Settings → Environment Variables, then *Redeploy*):
 
-✅ **Check:** `https://<your-project>.vercel.app/api/health` → `{"status":"ok","database":"connected"}` and
-`/privacy`, `/terms`, `/delete-account` open.
+| Name | Value |
+|---|---|
+| `DATABASE_URL` | **Required.** Supabase → project → **Connect** → **Transaction pooler** string (port 6543), with your DB password in place of `[YOUR-PASSWORD]` |
+| `JWT_SECRET` | long random string (`openssl rand -hex 32`) |
+| `SERVER_SECRET` | another long random string — also given to your dedicated servers |
+| `CRON_SECRET` | another random string (Vercel Cron sends it automatically) |
+| `APK_URL` | optional: direct link to your APK (default: latest GitHub Release asset `stormdrop.apk`) |
+| `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_WEB_CLIENT_SECRET` | step 6a |
+| `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | step 6b (optional) |
+| `ANDROID_PACKAGE_NAME` | e.g. `com.yourstudio.stormdrop` |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | step 6c |
+| `SUPPORT_EMAIL` | your support address |
+
+Free Supabase projects **pause after a week without activity** — if the home page shows *Database: error*, open the
+Supabase dashboard and press **Restore project**.
+
+✅ **Check:** open `https://<your-project>.vercel.app/` → *Server status* shows **API online**, **Database connected**,
+**Game tables ready**. `/api/health` returns the same as JSON.
 
 **Run locally instead:** `cd backend && npm run dev` → http://localhost:3000. While testing matchmaking alone set
 `MM_MIN_PLAYERS=1` and `MM_FILL_SECONDS=5` in `.env` so a match starts with just you.
+After editing anything in `backend/public/` or `backend/db/`, run `npm run assets` (pages and SQL are bundled into the API).
 
 ---
 
@@ -113,11 +120,21 @@ To test two players on one PC, build an Android or desktop client and run it nex
 
 ---
 
-## 5. Run on your Android phone
+## 5. Get the APK
 
+**Option A — build online with GitHub Actions (no Unity needed on your PC)**
+1. Get a Unity license file: install Unity Hub once, sign in, *Preferences → Licenses → Add → Get a free personal license*.
+   The file is `C:\ProgramData\Unity\Unity_lic.ulf` (Windows) or `/Library/Application Support/Unity/Unity_lic.ulf` (Mac).
+2. GitHub repo → **Settings → Secrets and variables → Actions**:
+   - Secrets: `UNITY_LICENSE` (whole contents of the .ulf file), `UNITY_EMAIL`, `UNITY_PASSWORD`
+   - Variables: `STORMDROP_API` = `https://<your-project>.vercel.app/api`
+3. **Actions → Build Android APK → Run workflow** (first run ≈ 30–60 min, later runs are cached).
+4. The APK appears under **Releases**, and the website's **Download APK** button links to it automatically
+   (the repository must be public for others to download from Releases; otherwise set `APK_URL` to a public file link).
+
+**Option B — build on your PC**
 1. Phone: Settings → About → tap *Build number* 7× → Developer options → **USB debugging** on. Connect via USB.
-2. Unity: **File ▸ Build Profiles** → Android → **Switch Platform**.
-3. Quick test build: Build Profiles → Android → *Build And Run* (APK is fine for testing).
+2. Unity: **File ▸ Build Profiles** → Android → **Switch Platform** → *Build And Run* (or *Build* to get an .apk file).
 
 ✅ **Check:** the game opens in landscape, guest login works, Training Ground runs at 30+ FPS on *Smooth*.
 

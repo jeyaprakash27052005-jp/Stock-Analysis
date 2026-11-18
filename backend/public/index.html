@@ -9,11 +9,50 @@
 <body><main>
 <h1><span>Stormdrop</span> Royale</h1>
 <p class="dim">50 players. One island. A storm that never stops closing in.</p>
-<nav><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/delete-account">Delete your account</a><a href="/api/health">Server status</a></nav>
+<nav><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/delete-account">Delete your account</a></nav>
+
+<div class="card">
+  <h2 style="margin-top:0">Download for Android</h2>
+  <p><b>Stormdrop Royale Lite</b> for Android 7.0+: solo battle royale against bots, with your online account. When installing, allow <i>Install unknown apps</i> for your browser.</p>
+  <a class="btn" href="/download">⬇ Download APK</a>
+  <p class="dim" id="apk-note"></p>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Server status</h2>
+  <table>
+    <tr><td>API</td><td id="s-api">checking…</td></tr>
+    <tr><td>Database</td><td id="s-db">checking…</td></tr>
+    <tr><td>Game tables</td><td id="s-tables">–</td></tr>
+    <tr><td>Players</td><td id="s-players">–</td></tr>
+    <tr><td>Match servers online</td><td id="s-servers">–</td></tr>
+  </table>
+  <p class="dim" id="s-time"></p>
+</div>
+
 <div class="card">
   <p>Parachute onto a 4 km island, loot weapons and gear, and be the last squad standing in 10–15 minute matches.
   Play Solo, Duo or Squad, fast 4v4 Clash Squad rounds, Team Deathmatch, or practise in the Training Ground.</p>
-  <p>Available on Google Play.</p>
 </div>
-</main></body>
+</main>
+<script>
+const ok = (t) => `<span class="ok">● ${t}</span>`, bad = (t) => `<span class="bad">● ${t}</span>`;
+async function refresh() {
+  const $ = (id) => document.getElementById(id);
+  try {
+    const h = await (await fetch("/api/health", { cache: "no-store" })).json();
+    $("s-api").innerHTML = ok("online");
+    $("s-db").innerHTML = h.database === "connected" ? ok("connected") : bad(h.database);
+    $("s-tables").innerHTML = (h.tables === "ready" || h.tables === "created") ? ok("ready") : (h.tables ? bad(h.tables) : "–");
+    $("s-players").textContent = h.players ?? "–";
+    $("s-servers").textContent = h.serversOnline ?? "–";
+    if (h.apkConfigured === false) $("apk-note").textContent = "No APK published yet — see docs/SETUP.md (Build APK).";
+  } catch {
+    $("s-api").innerHTML = bad("offline");
+  }
+  $("s-time").textContent = "Updated " + new Date().toLocaleTimeString();
+}
+refresh(); setInterval(refresh, 15000);
+</script>
+</body>
 </html>

@@ -1,0 +1,93 @@
+# Builds the Android APK in the cloud and publishes it as a GitHub Release.
+# The website's "Download APK" button (/download) points to the latest release's stormdrop.apk.
+#
+# One-time setup — GitHub repo → Settings → Secrets and variables → Actions:
+#   UNITY_LICENSE   contents of your Unity_v6.x.ulf license file (see docs/SETUP.md "Build the APK online")
+#   UNITY_EMAIL     your Unity account email
+#   UNITY_PASSWORD  your Unity account password
+#   STORMDROP_API   (variable, not secret) e.g. https://stormdrop-royal.vercel.app/api
+# Optional (release signing, otherwise the debug key is used — fine for testing, not for Play Store):
+#   STORMDROP_KEYSTORE_BASE64, STORMDROP_KEYSTORE_PASS, STORMDROP_KEY_ALIAS, STORMDROP_KEY_PASS
+#
+# Run it: Actions tab → "Build Android APK" → Run workflow.
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      aab:
+        description: "Also build a Play Store .aab"
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Free disk space (Unity + Android SDK are large)
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: unity/StormdropRoyale/Library
+          key: Library-Android-${{ hashFiles('unity/StormdropRoyale/Packages/manifest.json') }}
+          restore-keys: Library-Android-
+
+      - name: Build APK
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          STORMDROP_API: ${{ vars.STORMDROP_API }}
+          STORMDROP_VERSION_CODE: ${{ github.run_number }}
+          STORMDROP_KEYSTORE_BASE64: ${{ secrets.STORMDROP_KEYSTORE_BASE64 }}
+          STORMDROP_KEYSTORE_PASS: ${{ secrets.STORMDROP_KEYSTORE_PASS }}
+          STORMDROP_KEY_ALIAS: ${{ secrets.STORMDROP_KEY_ALIAS }}
+          STORMDROP_KEY_PASS: ${{ secrets.STORMDROP_KEY_PASS }}
+        with:
+          projectPath: unity/StormdropRoyale
+          targetPlatform: Android
+          unityVersion: 6000.0.58f1
+          buildMethod: Stormdrop.EditorTools.StormdropBuildTool.BuildApkCI
+          allowDirtyBuild: true
+
+      - name: Build AAB (optional)
+        if: ${{ inputs.aab }}
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          STORMDROP_API: ${{ vars.STORMDROP_API }}
+          STORMDROP_VERSION_CODE: ${{ github.run_number }}
+          STORMDROP_AAB: "1"
+          STORMDROP_KEYSTORE_BASE64: ${{ secrets.STORMDROP_KEYSTORE_BASE64 }}
+          STORMDROP_KEYSTORE_PASS: ${{ secrets.STORMDROP_KEYSTORE_PASS }}
+          STORMDROP_KEY_ALIAS: ${{ secrets.STORMDROP_KEY_ALIAS }}
+          STORMDROP_KEY_PASS: ${{ secrets.STORMDROP_KEY_PASS }}
+        with:
+          projectPath: unity/StormdropRoyale
+          targetPlatform: Android
+          unityVersion: 6000.0.58f1
+          buildMethod: Stormdrop.EditorTools.StormdropBuildTool.BuildApkCI
+          allowDirtyBuild: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('build-{0}', github.run_number) }}
+          name: Stormdrop Royale build ${{ github.run_number }}
+          make_latest: true
+          files: |
+            unity/StormdropRoyale/build/Android/stormdrop.apk
+            unity/StormdropRoyale/build/Android/stormdrop.aab
+          fail_on_unmatched_files: false

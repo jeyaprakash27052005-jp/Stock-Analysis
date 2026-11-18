@@ -12,7 +12,7 @@ namespace Stormdrop
             UIFactory.Button(col, "Continue with Facebook", () => Login(AuthService.SignInFacebook), new Color(0.23f, 0.35f, 0.6f), 34).GetComponent<RectTransform>().Place(0, 0.34f, 1, 0.64f);
             UIFactory.Button(col, "Play as Guest", () => Login(AuthService.SignInGuest), UIFactory.PanelLight, 34).GetComponent<RectTransform>().Place(0, 0, 1, 0.3f);
 
-            UIFactory.Text(Root, "Guest progress is saved to this device. Link Google or Facebook in Settings to keep it safe.\n" +
+            UIFactory.Text(Root, "Guest progress is saved to this device. Accounts not used for 30 days (e.g. after uninstalling) are deleted.\n" +
                                  "By continuing you agree to the Terms of Service and Privacy Policy. Ages 13+.",
                            24, UIFactory.TextDim, TextAnchor.MiddleCenter).rectTransform.Place(0.1f, 0.08f, 0.9f, 0.2f);
             UIFactory.Button(Root, "Privacy Policy", () => Application.OpenURL(LegalUrl("privacy")), new Color(0, 0, 0, 0), 26).GetComponent<RectTransform>().Place(0.3f, 0.02f, 0.48f, 0.08f);
