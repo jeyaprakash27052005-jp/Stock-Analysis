@@ -28,3 +28,6 @@ unity/StormdropRoyale/.idea/
 *.symbols.zip
 server/.env
 unity/StormdropRoyale/build/
+lite/.tools/
+lite/build/
+!releases/stormdrop-royale-lite.apk

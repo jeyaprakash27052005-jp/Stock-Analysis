@@ -8,7 +8,7 @@ const r = Router();
 
 r.get("/health", async (_req, res) => {
   const out = { status: "ok", service: "stormdrop-backend", database: "not configured (set DATABASE_URL)", tables: null,
-                apkConfigured: true };
+                apkConfigured: true, apk: "/download" };
   if (process.env.DATABASE_URL) {
     try {
       await one("select 1");

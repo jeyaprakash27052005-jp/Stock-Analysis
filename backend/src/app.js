@@ -2,7 +2,7 @@
 import cors from "cors";
 import express from "express";
 import { ensureSchema } from "./db.js";
-import { pages } from "./generated/assets.js";
+import { apkBase64, pages } from "./generated/assets.js";
 import authRoutes from "./routes/auth.js";
 import matchmakingRoutes from "./routes/matchmaking.js";
 import miscRoutes from "./routes/misc.js";
@@ -28,10 +28,17 @@ for (const [route, file] of Object.entries(PAGE_ROUTES)) {
 }
 app.get("/style.css", (_req, res) => res.set("Cache-Control", "public, max-age=3600").type("css").send(pages["style.css"]));
 
-// APK download: set APK_URL in the hosting env vars, otherwise the latest GitHub release asset is used.
-export const apkUrl = () => process.env.APK_URL ||
-  "https://github.com/jeyaprakash27052005-jp/Stormdrop-Royal/releases/latest/download/stormdrop.apk";
-app.get("/download", (_req, res) => res.redirect(302, apkUrl()));
+// APK download: serves the bundled Stormdrop Royale Lite APK. Set APK_URL to send players elsewhere instead
+// (e.g. the full Unity build on GitHub Releases).
+const apkBuffer = apkBase64 ? Buffer.from(apkBase64, "base64") : null;
+app.get(["/download", "/download/stormdrop-royale-lite.apk"], (req, res) => {
+  if (process.env.APK_URL) return res.redirect(302, process.env.APK_URL);
+  if (!apkBuffer) return res.status(404).type("text").send("No APK has been built yet.");
+  if (req.path === "/download") return res.redirect(302, "/download/stormdrop-royale-lite.apk");
+  res.set({ "Content-Type": "application/vnd.android.package-archive", "Content-Length": apkBuffer.length,
+            "Content-Disposition": 'attachment; filename="stormdrop-royale-lite.apk"', "Cache-Control": "public, max-age=600" });
+  res.end(apkBuffer);
+});
 
 const api = express.Router();
 // Make sure the game tables exist before any API call (first request after deploy creates them).
