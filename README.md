@@ -1,54 +1,11 @@
-# Stormdrop Royale
+# Stormdrop Royale (Android · Kotlin · Jetpack Compose · Firebase)
 
-A mobile-first 3D battle royale for Android (and iOS) built with **Unity 6 + Netcode for GameObjects**, a
-**Node.js API on Vercel** and **Supabase Postgres** — the same Vercel + Supabase setup the old Stock Analyzer used.
-All branding, characters, items and names are original.
+**Stormdrop Royale** is a native Android battle royale game built with **Kotlin**, **Jetpack Compose (Material 3)**, and **Firebase**.
 
-- 50 players parachute onto a 4 × 4 km island; 8 shrinking storm phases; 10–15 minute matches; last squad standing is **STORM CHAMPION!**
-- Modes: Solo, Duo, Squad, Clash Squad 4v4, Team Deathmatch, Training Ground, Ranked (Bronze → Grandmaster)
-- Virtual joystick, fire/aim/scope/jump/crouch/prone/reload/sprint, customisable HUD, auto-fire, gyroscope aim
-- HP 200, vest/helmet levels 1–4, backpacks 1–3, knock-down and revive
-- 11 guns across AR/SMG/Shotgun/Sniper/LMG/Pistol, melee, grenades, deployable Foam Wall, 5 attachment slots, airdrops
-- 12 characters with skills, 4 pets, jeep/motorbike/buggy/boat with fuel and damage
-- Guest / Google / Facebook login, friends, parties, guilds, quick chat + voice chat, regional ranked matchmaking
-- Server-side hit validation with lag compensation, server-checked movement, server-calculated rewards
-- Gold + Diamonds, store, Storm Pass (free/premium), Fortune Drop with public odds, missions, achievements, login calendar, events
-- Smooth / Standard / Ultra graphics presets, tuned for 2 GB RAM phones at 30 FPS
-- Analytics + crash reporting (Firebase), push notifications, Google Play Billing with server verification
+## Features
 
-## Repository
-
-| Folder | What it is |
-|---|---|
-| `unity/StormdropRoyale/` | The Unity project (open it with Unity Hub) |
-| `backend/` | Node.js API + database schema + privacy/terms/account-deletion pages (deploy to Vercel) |
-| `server/` | Docker files for dedicated match servers |
-| `play-store/` | Everything Google Play asks for: listing text, data safety, content rating, IAP products, release checklist, icon and feature graphic |
-| `docs/` | [Setup](docs/SETUP.md) · [Architecture](docs/ARCHITECTURE.md) · [Game design](docs/GAME_DESIGN.md) · [Database](docs/DATABASE.md) |
-
-## Quick start
-
-1. **Database:** `cd backend && cp .env.example .env` (add your Supabase `DATABASE_URL`) → `npm install && npm run db:setup`
-2. **Website + API:** import the repo in Vercel (no settings needed) → add `DATABASE_URL`, `JWT_SECRET`, `SERVER_SECRET` → deploy → the home page shows *Database connected*
-3. **Game:** Unity Hub → *Add project from disk* → `unity/StormdropRoyale` → **Stormdrop ▸ 1. Run Setup Wizard** →
-   restart the editor → set the API URL on *GameBootstrap* → Play → *Play as Guest* → *Training Ground* → START
-4. **APK:** GitHub → Actions → *Build Android APK* (`docs/SETUP.md` §5) — the site's Download button links to it
-5. **Matches:** build the Linux server and run it with Docker (`docs/SETUP.md` §4)
-6. **Publish:** `play-store/RELEASE_CHECKLIST.md`
-
-Full instructions: **[docs/SETUP.md](docs/SETUP.md)**.
-
-## Tests
-
-```bash
-cd backend && npm run check     # loads every module + rank/period unit checks
-```
-The full API flow (accounts, store, missions, spin, friends, party, guild, matchmaking, dedicated-server results,
-rank points, account deletion) has been exercised end-to-end against Postgres 16.
-
-## Status and what's placeholder
-
-The code is complete enough to play: Training Ground runs offline in the editor, and online matches work once a
-dedicated server is running. Art is placeholder (capsule characters, box buildings, procedural island, code-built UI) —
-see `docs/SETUP.md` §8 for swapping in real models. Google login, Facebook login, purchases, Firebase and Vivox each
-need their SDK imported and a checkbox ticked (`docs/SETUP.md` §6).
+- **Google Sign-In & Firebase Auth**: Seamless authentication via Jetpack Credential Manager (`GetSignInWithGoogleOption`).
+- **Firebase Cloud Firestore Backend**: Real-time cloud sync across user profiles, currencies (Gold & Diamonds), Vault items, 50-tier Season 1 Storm Pass, Daily/Weekly Missions, Achievements, Friends, Guilds & Guild Chat, Regional Leaderboards, and Match History.
+- **Playable Multi-Mode Arena**: Battle Royale (Solo, Duo, Squad), 4v4 Clash Squad, Team Deathmatch, and Training Ground on Isle Verdant with drop plane, parachute, loot, 11 weapons, bots, storm phases, airdrops, foam walls, character skills, and minimap.
+- **Armory Store & Phoenix Fortune Drop**: Browse and unlock 12 characters, 4 pets, skins, outfits, emotes, parachutes, and spin Fortune Drop crates.
+- **Local Settings via DataStore**: Graphics presets, FPS, aim/look sensitivity, auto-fire, aim assist, and audio preferences.

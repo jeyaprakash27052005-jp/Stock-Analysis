@@ -1,0 +1,422 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default-deny everything unless explicitly allowed below
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.playerTag is string && data.playerTag.size() >= 4 && data.playerTag.size() <= 20 &&
+             data.nickname is string && data.nickname.size() >= 3 && data.nickname.size() <= 30 &&
+             data.region in ['IND', 'SEA', 'ME', 'EU', 'NA', 'SA'] &&
+             data.level is int && data.level >= 1 && data.level <= 100 &&
+             data.xp is int && data.xp >= 0 && data.xp <= 1000000 &&
+             data.gold is int && data.gold >= 0 && data.gold <= 100000000 &&
+             data.diamonds is int && data.diamonds >= 0 && data.diamonds <= 100000000 &&
+             data.brRankPoints is int && data.brRankPoints >= 0 && data.brRankPoints <= 100000 &&
+             data.csRankPoints is int && data.csRankPoints >= 0 && data.csRankPoints <= 100000 &&
+             data.equippedCharacterId is string && data.equippedCharacterId.size() >= 1 && data.equippedCharacterId.size() <= 64 &&
+             (!('equippedPetId' in data) || (data.equippedPetId is string && data.equippedPetId.size() >= 1 && data.equippedPetId.size() <= 64)) &&
+             (!('equippedParachuteId' in data) || (data.equippedParachuteId is string && data.equippedParachuteId.size() >= 1 && data.equippedParachuteId.size() <= 64)) &&
+             (!('equippedWeaponSkinId' in data) || (data.equippedWeaponSkinId is string && data.equippedWeaponSkinId.size() >= 1 && data.equippedWeaponSkinId.size() <= 64)) &&
+             (!('guildId' in data) || (data.guildId is string && data.guildId.size() >= 1 && data.guildId.size() <= 64)) &&
+             data.loginStreakDay is int && data.loginStreakDay >= 0 && data.loginStreakDay <= 7 &&
+             (!('lastLoginClaimDate' in data) || (data.lastLoginClaimDate is string && data.lastLoginClaimDate.size() <= 20)) &&
+             data.doubleXpUntilMs is int && data.doubleXpUntilMs >= 0 &&
+             data.authProvider is string && data.authProvider.size() >= 1 && data.authProvider.size() <= 32 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidOwnedItem(data) {
+      return data.itemId is string && data.itemId.size() >= 1 && data.itemId.size() <= 64 &&
+             data.quantity is int && data.quantity >= 1 && data.quantity <= 9999 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidMissionProgress(data) {
+      return data.missionId is string && data.missionId.size() >= 1 && data.missionId.size() <= 64 &&
+             data.progress is int && data.progress >= 0 && data.progress <= 1000000 &&
+             data.claimed is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAchievementProgress(data) {
+      return data.achievementId is string && data.achievementId.size() >= 1 && data.achievementId.size() <= 64 &&
+             data.progress is int && data.progress >= 0 && data.progress <= 1000000 &&
+             data.claimed is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidPassProgress(data) {
+      return data.seasonId is string && data.seasonId.size() >= 1 && data.seasonId.size() <= 32 &&
+             data.passXp is int && data.passXp >= 0 && data.passXp <= 200000 &&
+             data.premiumUnlocked is bool &&
+             data.claimedKeys is string && data.claimedKeys.size() <= 2000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidMatchHistory(data) {
+      return data.modeId is string && data.modeId.size() >= 1 && data.modeId.size() <= 32 &&
+             data.ranked is bool &&
+             data.won is bool &&
+             data.placement is int && data.placement >= 1 && data.placement <= 100 &&
+             data.totalTeams is int && data.totalTeams >= 1 && data.totalTeams <= 100 &&
+             data.kills is int && data.kills >= 0 && data.kills <= 100 &&
+             data.damage is int && data.damage >= 0 && data.damage <= 100000 &&
+             data.headshots is int && data.headshots >= 0 && data.headshots <= 100 &&
+             data.survivalSeconds is int && data.survivalSeconds >= 0 && data.survivalSeconds <= 7200 &&
+             data.rankDelta is int && data.rankDelta >= -200 && data.rankDelta <= 200 &&
+             data.xpGained is int && data.xpGained >= 0 && data.xpGained <= 100000 &&
+             data.goldGained is int && data.goldGained >= 0 && data.goldGained <= 100000 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidFriend(data) {
+      return data.playerTag is string && data.playerTag.size() >= 4 && data.playerTag.size() <= 20 &&
+             data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 30 &&
+             data.level is int && data.level >= 1 && data.level <= 100 &&
+             data.brRankPoints is int && data.brRankPoints >= 0 && data.brRankPoints <= 100000 &&
+             data.status in ['accepted', 'incoming', 'pending'] &&
+             data.online is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidLeaderboardEntry(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.playerTag is string && data.playerTag.size() >= 4 && data.playerTag.size() <= 20 &&
+             data.nickname is string && data.nickname.size() >= 3 && data.nickname.size() <= 30 &&
+             data.region in ['IND', 'SEA', 'ME', 'EU', 'NA', 'SA'] &&
+             data.level is int && data.level >= 1 && data.level <= 100 &&
+             data.brRankPoints is int && data.brRankPoints >= 0 && data.brRankPoints <= 100000 &&
+             data.csRankPoints is int && data.csRankPoints >= 0 && data.csRankPoints <= 100000 &&
+             (!('guildTag' in data) || (data.guildTag is string && data.guildTag.size() >= 2 && data.guildTag.size() <= 5)) &&
+             data.publicEntry is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidGuild(data) {
+      return data.name is string && data.name.size() >= 3 && data.name.size() <= 20 &&
+             data.tag is string && data.tag.size() >= 2 && data.tag.size() <= 5 && data.tag.matches('^[A-Z0-9]{2,5}$') &&
+             data.description is string && data.description.size() <= 200 &&
+             data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.memberUids is list && data.memberUids.size() >= 1 && data.memberUids.size() <= 30 &&
+             data.memberUids[0] is string &&
+             data.level is int && data.level >= 1 && data.level <= 100 &&
+             data.glory is int && data.glory >= 0 && data.glory <= 100000000 &&
+             data.memberCount is int && data.memberCount >= 1 && data.memberCount <= 30 &&
+             data.maxMembers is int && data.maxMembers == 30 &&
+             data.minLevel is int && data.minLevel >= 1 && data.minLevel <= 100 &&
+             data.publicGuild is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidGuildMessage(data) {
+      return data.guildId is string && data.guildId.size() >= 1 && data.guildId.size() <= 128 &&
+             data.senderId is string && data.senderId == request.auth.uid &&
+             data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 30 &&
+             data.body is string && data.body.size() >= 1 && data.body.size() <= 200 &&
+             data.memberUids is list && data.memberUids.size() >= 1 && data.memberUids.size() <= 30 &&
+             data.memberUids[0] is string &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    // 1. User Profiles & Scoped Subcollections
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'playerTag', 'nickname', 'region', 'level', 'xp',
+                         'gold', 'diamonds', 'brRankPoints', 'csRankPoints',
+                         'equippedCharacterId', 'loginStreakDay', 'doubleXpUntilMs',
+                         'authProvider', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'playerTag', 'nickname', 'region', 'level', 'xp',
+                         'gold', 'diamonds', 'brRankPoints', 'csRankPoints',
+                         'equippedCharacterId', 'equippedPetId', 'equippedParachuteId',
+                         'equippedWeaponSkinId', 'guildId', 'loginStreakDay',
+                         'lastLoginClaimDate', 'doubleXpUntilMs', 'authProvider',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().playerTag == existing().playerTag &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'nickname', 'region', 'level', 'xp', 'gold', 'diamonds',
+                         'brRankPoints', 'csRankPoints', 'equippedCharacterId',
+                         'equippedPetId', 'equippedParachuteId', 'equippedWeaponSkinId',
+                         'guildId', 'loginStreakDay', 'lastLoginClaimDate',
+                         'doubleXpUntilMs', 'authProvider', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /owned_items/{itemId} {
+        allow get: if isOwner(userId) && isValidId(itemId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(itemId) &&
+                         incoming().itemId == itemId &&
+                         incoming().keys().hasAll(['itemId', 'quantity', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['itemId', 'quantity', 'createdAt', 'updatedAt']) &&
+                         isValidOwnedItem(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(itemId) &&
+                         incoming().itemId == existing().itemId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidOwnedItem(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['quantity', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(itemId);
+      }
+
+      match /missions/{missionId} {
+        allow get: if isOwner(userId) && isValidId(missionId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(missionId) &&
+                         incoming().missionId == missionId &&
+                         incoming().keys().hasAll(['missionId', 'progress', 'claimed', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['missionId', 'progress', 'claimed', 'createdAt', 'updatedAt']) &&
+                         isValidMissionProgress(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(missionId) &&
+                         incoming().missionId == existing().missionId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidMissionProgress(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['progress', 'claimed', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(missionId);
+      }
+
+      match /achievements/{achievementId} {
+        allow get: if isOwner(userId) && isValidId(achievementId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(achievementId) &&
+                         incoming().achievementId == achievementId &&
+                         incoming().keys().hasAll(['achievementId', 'progress', 'claimed', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['achievementId', 'progress', 'claimed', 'createdAt', 'updatedAt']) &&
+                         isValidAchievementProgress(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(achievementId) &&
+                         incoming().achievementId == existing().achievementId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidAchievementProgress(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['progress', 'claimed', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(achievementId);
+      }
+
+      match /pass/{seasonId} {
+        allow get: if isOwner(userId) && isValidId(seasonId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(seasonId) &&
+                         incoming().seasonId == seasonId &&
+                         incoming().keys().hasAll(['seasonId', 'passXp', 'premiumUnlocked', 'claimedKeys', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['seasonId', 'passXp', 'premiumUnlocked', 'claimedKeys', 'createdAt', 'updatedAt']) &&
+                         isValidPassProgress(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(seasonId) &&
+                         incoming().seasonId == existing().seasonId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidPassProgress(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['passXp', 'premiumUnlocked', 'claimedKeys', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(seasonId);
+      }
+
+      match /match_history/{matchId} {
+        allow get: if isOwner(userId) && isValidId(matchId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(matchId) &&
+                         incoming().keys().hasAll([
+                           'modeId', 'ranked', 'won', 'placement', 'totalTeams', 'kills',
+                           'damage', 'headshots', 'survivalSeconds', 'rankDelta',
+                           'xpGained', 'goldGained', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'modeId', 'ranked', 'won', 'placement', 'totalTeams', 'kills',
+                           'damage', 'headshots', 'survivalSeconds', 'rankDelta',
+                           'xpGained', 'goldGained', 'createdAt'
+                         ]) &&
+                         isValidMatchHistory(incoming());
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(matchId);
+      }
+
+      match /friends/{friendTag} {
+        allow get: if isOwner(userId) && isValidId(friendTag);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(friendTag) &&
+                         incoming().playerTag == friendTag &&
+                         incoming().keys().hasAll([
+                           'playerTag', 'nickname', 'level', 'brRankPoints',
+                           'status', 'online', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'playerTag', 'nickname', 'level', 'brRankPoints',
+                           'status', 'online', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidFriend(incoming());
+        allow update: if isOwner(userId) &&
+                         isValidId(friendTag) &&
+                         incoming().playerTag == existing().playerTag &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidFriend(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['nickname', 'level', 'brRankPoints', 'status', 'online', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(friendTag);
+      }
+    }
+
+    // 2. Public Non-PII Leaderboard Projections
+    match /leaderboard/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || existing().publicEntry == true);
+      allow list: if isSignedIn() && existing().publicEntry == true;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'playerTag', 'nickname', 'region', 'level',
+                         'brRankPoints', 'csRankPoints', 'publicEntry', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'playerTag', 'nickname', 'region', 'level',
+                         'brRankPoints', 'csRankPoints', 'guildTag', 'publicEntry', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidLeaderboardEntry(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().playerTag == existing().playerTag &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidLeaderboardEntry(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'nickname', 'region', 'level', 'brRankPoints',
+                         'csRankPoints', 'guildTag', 'publicEntry', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // 3. Community Guilds & Guild Chat
+    match /guilds/{guildId} {
+      allow get: if isSignedIn() && isValidId(guildId) && (existing().publicGuild == true || request.auth.uid in existing().memberUids);
+      allow list: if isSignedIn() && existing().publicGuild == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(guildId) &&
+                       incoming().ownerId == request.auth.uid &&
+                       incoming().memberUids.size() == 1 &&
+                       request.auth.uid in incoming().memberUids &&
+                       incoming().memberCount == 1 &&
+                       incoming().keys().hasAll([
+                         'name', 'tag', 'description', 'ownerId', 'memberUids',
+                         'level', 'glory', 'memberCount', 'maxMembers', 'minLevel',
+                         'publicGuild', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'name', 'tag', 'description', 'ownerId', 'memberUids',
+                         'level', 'glory', 'memberCount', 'maxMembers', 'minLevel',
+                         'publicGuild', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidGuild(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(guildId) &&
+                       isValidGuild(incoming()) &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().createdAt == existing().createdAt && (
+                         // Action 1: Owner updates guild metadata
+                         (existing().ownerId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'minLevel', 'glory', 'level', 'publicGuild', 'updatedAt'])) ||
+                         // Action 2: Authenticated player joins guild
+                         (!(request.auth.uid in existing().memberUids) &&
+                          existing().publicGuild == true &&
+                          existing().memberUids.size() < existing().maxMembers &&
+                          request.auth.uid in incoming().memberUids &&
+                          incoming().memberUids.size() == existing().memberUids.size() + 1 &&
+                          incoming().memberCount == existing().memberCount + 1 &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['memberUids', 'memberCount', 'updatedAt'])) ||
+                         // Action 3: Current member leaves guild (when other members remain)
+                         ((request.auth.uid in existing().memberUids) &&
+                          existing().memberUids.size() > 1 &&
+                          !(request.auth.uid in incoming().memberUids) &&
+                          incoming().memberUids.size() == existing().memberUids.size() - 1 &&
+                          incoming().memberCount == existing().memberCount - 1 &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['memberUids', 'memberCount', 'updatedAt']))
+                       );
+
+      allow delete: if isSignedIn() && isValidId(guildId) && existing().ownerId == request.auth.uid && existing().memberCount <= 1;
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() &&
+                      isValidId(guildId) &&
+                      isValidId(messageId) &&
+                      request.auth.uid in existing().memberUids;
+
+        allow list: if isSignedIn() && request.auth.uid in existing().memberUids;
+
+        allow create: if isSignedIn() &&
+                         isValidId(guildId) &&
+                         isValidId(messageId) &&
+                         incoming().guildId == guildId &&
+                         incoming().senderId == request.auth.uid &&
+                         request.auth.uid in incoming().memberUids &&
+                         incoming().keys().hasAll(['guildId', 'senderId', 'senderName', 'body', 'memberUids', 'createdAt']) &&
+                         incoming().keys().hasOnly(['guildId', 'senderId', 'senderName', 'body', 'memberUids', 'createdAt']) &&
+                         isValidGuildMessage(incoming()) &&
+                         exists(/databases/$(database)/documents/guilds/$(guildId)) &&
+                         request.auth.uid in get(/databases/$(database)/documents/guilds/$(guildId)).data.memberUids;
+
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(guildId) && isValidId(messageId) && existing().senderId == request.auth.uid;
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# Secrets
+# Secrets & Signing
 .env
 *.keystore
 *.jks
@@ -6,28 +6,16 @@ google-services.json
 GoogleService-Info.plist
 service-account*.json
 
-# Node backend
-node_modules/
-.vercel
-
-# Unity
-unity/StormdropRoyale/[Ll]ibrary/
-unity/StormdropRoyale/[Tt]emp/
-unity/StormdropRoyale/[Oo]bj/
-unity/StormdropRoyale/[Bb]uild/
-unity/StormdropRoyale/[Bb]uilds/
-unity/StormdropRoyale/[Ll]ogs/
-unity/StormdropRoyale/[Uu]ser[Ss]ettings/
-unity/StormdropRoyale/[Mm]emoryCaptures/
-unity/StormdropRoyale/*.csproj
-unity/StormdropRoyale/*.sln
-unity/StormdropRoyale/.vs/
-unity/StormdropRoyale/.idea/
+# Android / Gradle
+.gradle/
+build/
+*/build/
+.kotlin/
+.idea/
+local.properties
 *.apk
 *.aab
 *.symbols.zip
-server/.env
-unity/StormdropRoyale/build/
-lite/.tools/
-lite/build/
-!releases/stormdrop-royale-lite.apk
+
+# Firebase CLI logs
+*-debug.log

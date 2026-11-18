@@ -1,0 +1,274 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated player profile, currency wallet, rank points, and equipped loadout.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "playerTag": { "type": "string", "description": "10-digit public player ID." },
+        "nickname": { "type": "string", "description": "In-game callsign (3-16 chars)." },
+        "region": { "type": "string", "enum": ["IND", "SEA", "ME", "EU", "NA", "SA"] },
+        "level": { "type": "integer", "description": "Player account level (1-100)." },
+        "xp": { "type": "integer", "description": "Current XP within level." },
+        "gold": { "type": "integer", "description": "Gold currency balance." },
+        "diamonds": { "type": "integer", "description": "Diamonds currency balance." },
+        "brRankPoints": { "type": "integer", "description": "Battle Royale ranked points." },
+        "csRankPoints": { "type": "integer", "description": "Clash Squad ranked points." },
+        "equippedCharacterId": { "type": "string", "description": "Equipped character catalog ID." },
+        "equippedPetId": { "type": "string", "description": "Optional equipped pet catalog ID." },
+        "equippedParachuteId": { "type": "string", "description": "Optional equipped parachute catalog ID." },
+        "equippedWeaponSkinId": { "type": "string", "description": "Optional equipped weapon skin ID." },
+        "guildId": { "type": "string", "description": "Optional joined guild document ID." },
+        "loginStreakDay": { "type": "integer", "description": "7-day login streak day counter." },
+        "lastLoginClaimDate": { "type": "string", "description": "YYYY-MM-DD of last daily login claim." },
+        "doubleXpUntilMs": { "type": "integer", "description": "Epoch ms when Double XP boost expires." },
+        "authProvider": { "type": "string", "description": "Auth provider identifier (google)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": [
+        "userId",
+        "playerTag",
+        "nickname",
+        "region",
+        "level",
+        "xp",
+        "gold",
+        "diamonds",
+        "brRankPoints",
+        "csRankPoints",
+        "equippedCharacterId",
+        "loginStreakDay",
+        "doubleXpUntilMs",
+        "authProvider",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OwnedItem": {
+      "title": "OwnedItem",
+      "description": "Catalog item owned by a player in their Vault.",
+      "type": "object",
+      "properties": {
+        "itemId": { "type": "string" },
+        "quantity": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["itemId", "quantity", "createdAt", "updatedAt"]
+    },
+    "MissionProgress": {
+      "title": "MissionProgress",
+      "description": "Daily or weekly mission progress for a player.",
+      "type": "object",
+      "properties": {
+        "missionId": { "type": "string" },
+        "progress": { "type": "integer" },
+        "claimed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["missionId", "progress", "claimed", "createdAt", "updatedAt"]
+    },
+    "AchievementProgress": {
+      "title": "AchievementProgress",
+      "description": "Lifetime achievement milestone progress for a player.",
+      "type": "object",
+      "properties": {
+        "achievementId": { "type": "string" },
+        "progress": { "type": "integer" },
+        "claimed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["achievementId", "progress", "claimed", "createdAt", "updatedAt"]
+    },
+    "PassProgress": {
+      "title": "PassProgress",
+      "description": "Storm Pass season progression and claimed reward keys.",
+      "type": "object",
+      "properties": {
+        "seasonId": { "type": "string" },
+        "passXp": { "type": "integer" },
+        "premiumUnlocked": { "type": "boolean" },
+        "claimedKeys": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["seasonId", "passXp", "premiumUnlocked", "claimedKeys", "createdAt", "updatedAt"]
+    },
+    "MatchHistory": {
+      "title": "MatchHistory",
+      "description": "Immutable record of a completed match.",
+      "type": "object",
+      "properties": {
+        "modeId": { "type": "string" },
+        "ranked": { "type": "boolean" },
+        "won": { "type": "boolean" },
+        "placement": { "type": "integer" },
+        "totalTeams": { "type": "integer" },
+        "kills": { "type": "integer" },
+        "damage": { "type": "integer" },
+        "headshots": { "type": "integer" },
+        "survivalSeconds": { "type": "integer" },
+        "rankDelta": { "type": "integer" },
+        "xpGained": { "type": "integer" },
+        "goldGained": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "modeId",
+        "ranked",
+        "won",
+        "placement",
+        "totalTeams",
+        "kills",
+        "damage",
+        "headshots",
+        "survivalSeconds",
+        "rankDelta",
+        "xpGained",
+        "goldGained",
+        "createdAt"
+      ]
+    },
+    "Friend": {
+      "title": "Friend",
+      "description": "Friend or rival contact entry in a player's friends subcollection.",
+      "type": "object",
+      "properties": {
+        "playerTag": { "type": "string" },
+        "nickname": { "type": "string" },
+        "level": { "type": "integer" },
+        "brRankPoints": { "type": "integer" },
+        "status": { "type": "string", "enum": ["accepted", "incoming", "pending"] },
+        "online": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["playerTag", "nickname", "level", "brRankPoints", "status", "online", "createdAt", "updatedAt"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public non-PII ranked leaderboard projection per user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "playerTag": { "type": "string" },
+        "nickname": { "type": "string" },
+        "region": { "type": "string", "enum": ["IND", "SEA", "ME", "EU", "NA", "SA"] },
+        "level": { "type": "integer" },
+        "brRankPoints": { "type": "integer" },
+        "csRankPoints": { "type": "integer" },
+        "guildTag": { "type": "string" },
+        "publicEntry": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "playerTag",
+        "nickname",
+        "region",
+        "level",
+        "brRankPoints",
+        "csRankPoints",
+        "publicEntry",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Guild": {
+      "title": "Guild",
+      "description": "Player-created squad guild with bounded member UID list.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "tag": { "type": "string" },
+        "description": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "level": { "type": "integer" },
+        "glory": { "type": "integer" },
+        "memberCount": { "type": "integer" },
+        "maxMembers": { "type": "integer" },
+        "minLevel": { "type": "integer" },
+        "publicGuild": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "tag",
+        "description",
+        "ownerId",
+        "memberUids",
+        "level",
+        "glory",
+        "memberCount",
+        "maxMembers",
+        "minLevel",
+        "publicGuild",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GuildMessage": {
+      "title": "GuildMessage",
+      "description": "Chat message inside a guild, scoped by denormalized memberUids.",
+      "type": "object",
+      "properties": {
+        "guildId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "body": { "type": "string" },
+        "memberUids": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["guildId", "senderId", "senderName", "body", "memberUids", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private player profile document keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/owned_items/{itemId}": {
+      "schema": { "$ref": "#/entities/OwnedItem" },
+      "description": "Owned characters, pets, skins, outfits, emotes, and consumables."
+    },
+    "/users/{userId}/missions/{missionId}": {
+      "schema": { "$ref": "#/entities/MissionProgress" },
+      "description": "Daily and weekly mission progress per player."
+    },
+    "/users/{userId}/achievements/{achievementId}": {
+      "schema": { "$ref": "#/entities/AchievementProgress" },
+      "description": "Career achievement progress per player."
+    },
+    "/users/{userId}/pass/{seasonId}": {
+      "schema": { "$ref": "#/entities/PassProgress" },
+      "description": "Season Storm Pass XP and claimed rewards per player."
+    },
+    "/users/{userId}/match_history/{matchId}": {
+      "schema": { "$ref": "#/entities/MatchHistory" },
+      "description": "Completed match records for a player."
+    },
+    "/users/{userId}/friends/{friendTag}": {
+      "schema": { "$ref": "#/entities/Friend" },
+      "description": "Player's friend list and friend requests."
+    },
+    "/leaderboard/{userId}": {
+      "schema": { "$ref": "#/entities/LeaderboardEntry" },
+      "description": "Public non-PII regional leaderboard projections."
+    },
+    "/guilds/{guildId}": {
+      "schema": { "$ref": "#/entities/Guild" },
+      "description": "Community guilds players can found and join."
+    },
+    "/guilds/{guildId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/GuildMessage" },
+      "description": "Real-time guild chat messages for guild members."
+    }
+  }
+}

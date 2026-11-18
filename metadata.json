@@ -1,0 +1,8 @@
+{
+  "name": "Stormdrop Royale",
+  "description": "Fast 50-player mobile battle royale with Isle Verdant tactical drop, 11 weapons, 12 characters, Storm Pass, Fortune Drop, Store, Vault, Guilds, and Ranked progression.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
