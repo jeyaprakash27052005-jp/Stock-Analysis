@@ -1,10 +1,8 @@
-/* Stormdrop Royale Lite — HTML5 (three.js) version packaged in the Android app.
- * Online: guest login, profile, missions, store and daily reward from the Stormdrop backend.
- * Offline-capable solo battle royale against bots: plane drop, parachute, loot, weapons,
- * armor, med kits, shrinking storm, minimap, kill feed, results. */
+/* Stormdrop Royale Lite — HTML5 (three.js) battle royale packaged as an Android app.
+ * Fully offline: solo battle royale against bots (plane drop, parachute, loot, weapons, armor,
+ * med kits, shrinking storm, minimap, kill feed, results). Profile and stats are saved on the phone. */
 (() => {
 "use strict";
-const API = "https://stormdrop-royal.vercel.app/api";
 const $ = (id) => document.getElementById(id);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -12,107 +10,73 @@ const store = {
 };
 const settings = Object.assign({ quality: "low", sens: 1 }, store.get("sd.settings", {}));
 
-// ====================================================================== online
-const net = {
-  token: store.get("sd.token", null), me: null, online: false,
-  async call(method, path, body) {
-    const r = await fetch(API + path, {
-      method, headers: { "content-type": "application/json", ...(this.token ? { authorization: "Bearer " + this.token } : {}) },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
-    return j;
-  },
-  deviceId() {
-    let id = store.get("sd.device", null);
-    if (!id) { id = Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) => b.toString(16).padStart(2, "0")).join(""); store.set("sd.device", id); }
-    return id;
-  },
-};
-
-async function checkHealth() {
-  try {
-    const h = await (await fetch(API + "/health", { cache: "no-store" })).json();
-    $("st-api").innerHTML = '<span class="ok">● online</span>';
-    const dbOk = h.database === "connected";
-    $("st-db").innerHTML = dbOk ? '<span class="ok">● connected</span>' : `<span class="bad">● ${h.database}</span>`;
-    net.online = dbOk;
-  } catch {
-    $("st-api").innerHTML = '<span class="bad">● unreachable</span>';
-    $("st-db").innerHTML = '<span class="bad">● offline</span>';
-    net.online = false;
-  }
-}
-
-async function guestLogin() {
-  const b = $("btn-guest"); b.disabled = true; b.textContent = "Signing in…";
-  try {
-    if (net.token) { try { net.me = await net.call("GET", "/me"); } catch { net.token = null; } }
-    if (!net.me) {
-      const r = await net.call("POST", "/auth/guest", { deviceId: net.deviceId() });
-      net.token = r.token; net.me = r.profile; store.set("sd.token", r.token);
-    }
-    showLobby();
-  } catch (e) {
-    toast("Online login failed: " + e.message + " — playing offline");
-    showLobby();
-  } finally { b.disabled = false; b.textContent = "Play as Guest"; }
-}
+// ====================================================================== local profile (saved on this phone)
+const profile = Object.assign({ name: "", xp: 0, gold: 0, matches: 0, wins: 0, kills: 0, best: 0, damage: 0 }, store.get("sd.profile", {}));
+const saveProfile = () => store.set("sd.profile", profile);
+const levelOf = (xp) => 1 + Math.floor(Math.sqrt(xp / 120));
+const net = { me: null };   // kept so match code can read the player's name
 
 function show(id) {
   for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id);
   $("hud").classList.toggle("on", id === "hud");
 }
 
+function enterGame() {
+  const input = $("name-input");
+  const name = (input.value || "").trim().slice(0, 16);
+  if (name.length >= 3) profile.name = name;
+  if (!profile.name) profile.name = "Dropper" + Math.floor(1000 + Math.random() * 9000);
+  saveProfile();
+  showLobby();
+}
+
 function showLobby() {
   show("lobby");
-  const m = net.me;
-  $("p-name").textContent = m ? m.nickname : "Offline player";
-  $("p-sub").textContent = m ? `ID ${m.player_tag} · Level ${m.level} · ${m.region}` : "Not signed in — progress isn't saved";
-  $("p-gold").textContent = m ? Number(m.gold).toLocaleString() : "—";
-  $("p-dia").textContent = m ? Number(m.diamonds).toLocaleString() : "—";
-  $("p-rank").textContent = m && m.brRank ? `${m.brRank.label} · ${m.br_rank_points} RP` : "";
-  $("net-note").textContent = m ? "Connected to the online database." : "Offline mode.";
+  net.me = { nickname: profile.name };
+  $("p-name").textContent = profile.name;
+  const pl = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  $("p-sub").textContent = `Level ${levelOf(profile.xp)} · ${pl(profile.matches, "match").replace("matchs", "matches")} · ${pl(profile.wins, "win")}`;
+  $("p-gold").textContent = profile.gold.toLocaleString();
+  $("p-rank").textContent = profile.best ? `Best finish #${profile.best}` : "";
 }
+function refreshMe() {}
 
-async function refreshMe() { if (net.token) try { net.me = await net.call("GET", "/me"); showLobby(); } catch {} }
+/** Called when a match ends: XP and Gold are earned locally. */
+function recordMatch(won, placement, kills, damage) {
+  profile.matches++; if (won) profile.wins++;
+  profile.kills += kills; profile.damage += Math.round(damage);
+  profile.best = profile.best ? Math.min(profile.best, placement) : placement;
+  const xp = 60 + kills * 25 + Math.max(0, 11 - placement) * 15 + (won ? 150 : 0);
+  const gold = 25 + kills * 12 + (won ? 120 : 0);
+  profile.xp += xp; profile.gold += gold;
+  saveProfile();
+  return { xp, gold };
+}
 
 function panel(html) { $("panel").innerHTML = html; }
-async function tab(name) {
+function tab(name) {
   if (name === "settings") return renderSettings();
-  if (!net.me) return panel('<p class="dim">Sign in online to use this.</p>');
-  panel('<p class="dim">Loading…</p>');
-  try {
-    if (name === "missions") {
-      const r = await net.call("GET", "/progression/missions");
-      panel(r.missions.map((m) => `<div class="item"><span>[${m.period}] ${m.title}<br><span class="dim">+${m.reward_gold} Gold · ${Math.min(m.progress, m.target)}/${m.target}</span></span>
-        ${m.claimed_at ? '<span class="ok">Claimed</span>' : m.complete ? `<button class="primary" data-claim="${m.id}">Claim</button>` : ""}</div>`).join(""));
-    } else if (name === "store") {
-      const [cat, inv] = await Promise.all([net.call("GET", "/store/catalog"), net.call("GET", "/store/inventory")]);
-      const owned = new Set(inv.items.map((i) => i.item_id));
-      const items = cat.items.filter((i) => i.in_store && (i.price_gold != null || i.price_diamonds != null));
-      panel(items.map((i) => `<div class="item"><span>${i.name}<br><span class="dim">${i.type.replace("_", " ")} · ${i.rarity}</span></span><span class="row">
-        ${owned.has(i.id) && i.type !== "consumable" ? '<span class="ok">Owned</span>' :
-          (i.price_gold != null ? `<button data-buy="${i.id}" data-cur="gold">● ${i.price_gold}</button>` : "") +
-          (i.price_diamonds != null ? `<button data-buy="${i.id}" data-cur="diamonds">◆ ${i.price_diamonds}</button>` : "")}</span></div>`).join(""));
-    } else if (name === "reward") {
-      const r = await net.call("GET", "/progression/login-rewards");
-      panel(r.rewards.map((d) => `<div class="item"><span>Day ${d.day}: ${d.name}</span>${d.day <= r.streakDay ? '<span class="ok">✔</span>' : ""}</div>`).join("") +
-        (r.canClaim ? '<p><button class="primary" id="claim-daily">Claim today\'s reward</button></p>' : '<p class="dim">Come back tomorrow!</p>'));
-    }
-  } catch (e) { panel(`<p class="bad">${e.message}</p>`); }
+  const kd = profile.matches ? (profile.kills / Math.max(1, profile.matches - profile.wins)).toFixed(2) : "0.00";
+  panel(`<div class="item"><span>Level</span><b>${levelOf(profile.xp)} <span class="dim">(${profile.xp} XP)</span></b></div>
+    <div class="item"><span>Matches</span><b>${profile.matches}</b></div>
+    <div class="item"><span>Storm Champion wins</span><b>${profile.wins}</b></div>
+    <div class="item"><span>Eliminations</span><b>${profile.kills}</b></div>
+    <div class="item"><span>K/D</span><b>${kd}</b></div>
+    <div class="item"><span>Total damage</span><b>${profile.damage.toLocaleString()}</b></div>
+    <div class="item"><span>Best finish</span><b>${profile.best ? "#" + profile.best : "—"}</b></div>`);
 }
 
-$("panel").addEventListener("click", async (e) => {
+$("panel").addEventListener("click", (e) => {
   const t = e.target;
-  try {
-    if (t.dataset.claim) { await net.call("POST", `/progression/missions/${t.dataset.claim}/claim`); toast("Claimed!"); await refreshMe(); tab("missions"); }
-    else if (t.dataset.buy) { await net.call("POST", "/store/buy", { itemId: t.dataset.buy, currency: t.dataset.cur }); toast("Purchased!"); await refreshMe(); tab("store"); }
-    else if (t.id === "claim-daily") { await net.call("POST", "/progression/login-rewards/claim"); toast("Reward claimed!"); await refreshMe(); tab("reward"); }
-    else if (t.dataset.q) { settings.quality = t.dataset.q; store.set("sd.settings", settings); applyQuality(); renderSettings(); }
-    else if (t.id === "signout") { net.token = null; net.me = null; store.set("sd.token", null); show("splash"); }
-  } catch (err) { toast(err.message); }
+  if (t.dataset.q) { settings.quality = t.dataset.q; store.set("sd.settings", settings); applyQuality(); renderSettings(); }
+  else if (t.id === "rename") {
+    const v = ($("rename-input").value || "").trim().slice(0, 16);
+    if (v.length < 3) return toast("Name must be at least 3 characters");
+    profile.name = v; saveProfile(); showLobby(); renderSettings(); toast("Name saved");
+  } else if (t.id === "reset") {
+    if (t.dataset.armed) { localStorage.removeItem("sd.profile"); location.reload(); }
+    else { t.dataset.armed = "1"; t.textContent = "Tap again to erase all progress"; }
+  }
 });
 $("panel").addEventListener("input", (e) => { if (e.target.id === "sens") { settings.sens = +e.target.value; store.set("sd.settings", settings); } });
 
@@ -120,8 +84,9 @@ function renderSettings() {
   panel(`<div class="item"><span>Graphics</span><span class="row">${["low", "high"].map((q) =>
       `<button data-q="${q}" class="${settings.quality === q ? "primary" : ""}">${q === "low" ? "Smooth" : "Ultra"}</button>`).join("")}</span></div>
     <div class="item"><span>Look sensitivity</span><input id="sens" type="range" min="0.3" max="3" step="0.1" value="${settings.sens}"></div>
-    ${net.me ? '<div class="item"><span>Account</span><button id="signout">Sign out</button></div>' : ""}
-`);
+    <div class="item"><span>Name</span><span class="row"><input id="rename-input" maxlength="16" value="${profile.name.replace(/"/g, "")}" style="width:130px;padding:8px;border-radius:8px;border:0">
+      <button id="rename">Save</button></span></div>
+    <div class="item"><span>Progress</span><button id="reset">Erase progress</button></div>`);
 }
 
 let toastTimer;
@@ -964,10 +929,12 @@ function finish(won) {
   if (won) me.placement = 1;
   banner(won ? "STORM CHAMPION!" : `ELIMINATED — #${me.placement}`, 3);
   setTimeout(() => {
+    const reward = recordMatch(won, me.placement, me.kills, me.damage);
     $("r-title").textContent = won ? "STORM CHAMPION!" : `#${me.placement} of 20`;
     $("r-stats").innerHTML = `<div class="item"><span>Eliminations</span><b>${me.kills}</b></div>
       <div class="item"><span>Damage</span><b>${Math.round(me.damage)}</b></div>
-      <div class="item"><span>Survived</span><b>${Math.floor(M.t / 60)}:${String(Math.floor(M.t % 60)).padStart(2, "0")}</b></div>`;
+      <div class="item"><span>Survived</span><b>${Math.floor(M.t / 60)}:${String(Math.floor(M.t % 60)).padStart(2, "0")}</b></div>
+      <div class="item"><span>Rewards</span><b>+${reward.xp} XP · +${reward.gold} Gold</b></div>`;
     endCleanup();
     zoneWall.visible = false;
     show("results");
@@ -1057,8 +1024,8 @@ function renderMatch(dt) {
 requestAnimationFrame(frame);
 
 // ====================================================================== wiring
-$("btn-guest").onclick = guestLogin;
-$("btn-offline").onclick = () => { net.me = null; showLobby(); };
+$("btn-guest").onclick = enterGame;
+$("name-input").value = profile.name;
 $("btn-play").onclick = () => startMatch();
 $("btn-play").disabled = true;
 modelReady.then((ok) => {
@@ -1066,12 +1033,10 @@ modelReady.then((ok) => {
   $("load-note").textContent = ok ? "" : "3D soldiers unavailable on this device — using simple models.";
 });
 $("btn-back").onclick = () => { refreshMe(); showLobby(); };
-$("tab-missions").onclick = () => tab("missions");
-$("tab-store").onclick = () => tab("store");
-$("tab-reward").onclick = () => tab("reward");
+$("tab-stats").onclick = () => tab("stats");
 $("tab-settings").onclick = () => tab("settings");
 window.SD = { startMatch, press, get match() { return M; }, net,
   // test hook: advance the simulation without rendering
   simulate(seconds) { for (let t = 0; t < seconds && M && !M.over; t += 0.05) step(0.05); } };   // for automated tests
-checkHealth().then(() => { if (net.token && net.online) guestLogin(); });
+if (profile.name) $("btn-guest").textContent = "Play as " + profile.name;
 })();
