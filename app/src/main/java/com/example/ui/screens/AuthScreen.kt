@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,7 +70,6 @@ fun AuthScreen(
     var isCheckingAuto by remember { mutableStateOf(true) }
     var isSigningIn by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var legalDialogTitle by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         attemptAutoSignIn(
@@ -319,47 +316,7 @@ fun AuthScreen(
                     color = StormdropColors.TextMuted,
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextButton(
-                        onClick = { legalDialogTitle = "Privacy Policy" },
-                        modifier = Modifier.testTag("privacy_button"),
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.privacy_policy),
-                            color = StormdropColors.AccentCyan,
-                        )
-                    }
-                    TextButton(
-                        onClick = { legalDialogTitle = "Terms of Service" },
-                        modifier = Modifier.testTag("terms_button"),
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.terms_of_service),
-                            color = StormdropColors.AccentCyan,
-                        )
-                    }
-                }
             }
         }
-    }
-
-    if (legalDialogTitle != null) {
-        val body = if (legalDialogTitle == "Privacy Policy") {
-            "Stormdrop Royale stores your player tag, nickname, rank points, inventory, Storm Pass progression, guilds, and match summaries in Firebase Firestore secured by Google Sign-In. You can permanently delete your account and all cloud records anytime in Settings."
-        } else {
-            "Stormdrop Royale is a 13+ battle royale mobile game. Fair play is enforced; tampering, harassment in guild chat, or unauthorized exploits may result in account removal."
-        }
-        AlertDialog(
-            onDismissRequest = { legalDialogTitle = null },
-            containerColor = StormdropColors.BgSurface,
-            title = { Text(legalDialogTitle!!, color = StormdropColors.TextMain) },
-            text = { Text(body, color = StormdropColors.TextDim) },
-            confirmButton = {
-                TextButton(onClick = { legalDialogTitle = null }) {
-                    Text("Close", color = StormdropColors.AccentOrange)
-                }
-            },
-        )
     }
 }
