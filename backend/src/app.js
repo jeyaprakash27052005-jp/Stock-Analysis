@@ -30,7 +30,7 @@ app.get("/style.css", (_req, res) => res.set("Cache-Control", "public, max-age=3
 
 // APK download: set APK_URL in the hosting env vars, otherwise the latest GitHub release asset is used.
 export const apkUrl = () => process.env.APK_URL ||
-  "https://github.com/jeyaprakash27052005-jp/Stock-Analysis/releases/latest/download/stormdrop.apk";
+  "https://github.com/jeyaprakash27052005-jp/Stormdrop-Royal/releases/latest/download/stormdrop.apk";
 app.get("/download", (_req, res) => res.redirect(302, apkUrl()));
 
 const api = express.Router();
