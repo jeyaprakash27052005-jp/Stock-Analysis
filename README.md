@@ -1,78 +1,53 @@
-# Stock Analyzer (Vercel + Supabase)
+# Stormdrop Royale
 
-Full NSE stock analysis website: market overview, automatic watchlist scanner,
-technical + fundamental deep analysis, signal history with performance tracking,
-alerts, and your own price database in Supabase. Works on phone and PC.
+A mobile-first 3D battle royale for Android (and iOS) built with **Unity 6 + Netcode for GameObjects**, a
+**Node.js API on Vercel** and **Supabase Postgres** — the same Vercel + Supabase setup the old Stock Analyzer used.
+All branding, characters, items and names are original.
 
-**For analysis and learning only. Not investment advice. It never places trades.**
+- 50 players parachute onto a 4 × 4 km island; 8 shrinking storm phases; 10–15 minute matches; last squad standing is **STORM CHAMPION!**
+- Modes: Solo, Duo, Squad, Clash Squad 4v4, Team Deathmatch, Training Ground, Ranked (Bronze → Grandmaster)
+- Virtual joystick, fire/aim/scope/jump/crouch/prone/reload/sprint, customisable HUD, auto-fire, gyroscope aim
+- HP 200, vest/helmet levels 1–4, backpacks 1–3, knock-down and revive
+- 11 guns across AR/SMG/Shotgun/Sniper/LMG/Pistol, melee, grenades, deployable Foam Wall, 5 attachment slots, airdrops
+- 12 characters with skills, 4 pets, jeep/motorbike/buggy/boat with fuel and damage
+- Guest / Google / Facebook login, friends, parties, guilds, quick chat + voice chat, regional ranked matchmaking
+- Server-side hit validation with lag compensation, server-checked movement, server-calculated rewards
+- Gold + Diamonds, store, Storm Pass (free/premium), Fortune Drop with public odds, missions, achievements, login calendar, events
+- Smooth / Standard / Ultra graphics presets, tuned for 2 GB RAM phones at 30 FPS
+- Analytics + crash reporting (Firebase), push notifications, Google Play Billing with server verification
 
-## Features
+## Repository
 
-| Tab | What you get |
+| Folder | What it is |
 |---|---|
-| 🌐 Market | Nifty 50, Sensex, Bank Nifty, India VIX, 1-year Nifty chart, sector performance, breadth, top gainers/losers |
-| 🔎 Scanner | Watchlist scored −100…+100 with signal, RSI, stop loss and target |
-| 🧠 Analysis | Any NSE stock: overall rating /100, candlestick chart with EMA 20/50/200, Bollinger, volume, MACD, RSI; fundamentals health check, key ratios, yearly revenue/profit, returns and risk |
-| 📜 Signals | Every signal change saved, with result since the call, target/stop hit |
-| ⭐ Watchlist & Alerts | Add/remove stocks; price/RSI/strong-signal alerts (+ optional Telegram) |
-| 🗄️ Database | Daily prices saved in Supabase, downloadable as CSV |
+| `unity/StormdropRoyale/` | The Unity project (open it with Unity Hub) |
+| `backend/` | Node.js API + database schema + privacy/terms/account-deletion pages (deploy to Vercel) |
+| `server/` | Docker files for dedicated match servers |
+| `play-store/` | Everything Google Play asks for: listing text, data safety, content rating, IAP products, release checklist, icon and feature graphic |
+| `docs/` | [Setup](docs/SETUP.md) · [Architecture](docs/ARCHITECTURE.md) · [Game design](docs/GAME_DESIGN.md) · [Database](docs/DATABASE.md) |
 
-A daily scheduled job (Vercel Cron, 3:45 PM IST, Mon–Fri) scans your watchlist after
-market close, so prices, signals and alerts are saved even if you don't open the site.
+## Quick start
 
-Data: Yahoo Finance (real NSE prices, about 15 minutes delayed) — no API key needed.
+1. **Database:** `cd backend && cp .env.example .env` (add your Supabase `DATABASE_URL`) → `npm install && npm run db:setup`
+2. **API:** Vercel → Root Directory `backend` → add the env vars from `.env.example` → deploy → open `/api/health`
+3. **Game:** Unity Hub → *Add project from disk* → `unity/StormdropRoyale` → **Stormdrop ▸ 1. Run Setup Wizard** →
+   restart the editor → set the API URL on *GameBootstrap* → Play → *Play as Guest* → *Training Ground* → START
+4. **Matches:** build the Linux server and run it with Docker (`docs/SETUP.md` §4)
+5. **Publish:** `play-store/RELEASE_CHECKLIST.md`
 
-## Deploy on Vercel
+Full instructions: **[docs/SETUP.md](docs/SETUP.md)**.
 
-1. Go to **vercel.com**, sign in with GitHub, click **Add New → Project** and import this repository.
-2. Framework preset: **Other**. Leave build settings empty.
-3. Open **Environment Variables** and add:
+## Tests
 
-   | Name | Value |
-   |---|---|
-   | `DATABASE_URL` | Supabase → project **Stock Analyzer** → **Connect** → **Transaction pooler** string, with your database password |
-   | `APP_PASSWORD` | a password to protect your site |
-   | `DATA_MODE` | `yahoo` |
-   | `CRON_SECRET` | any long random text (lets the daily job run) |
-   | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | optional, for phone alerts |
-
-4. Click **Deploy**. Open your `*.vercel.app` link on your phone and use **Add to Home Screen**.
-
-Every `git push` to this repository redeploys automatically.
-
-## Run on your PC
-
-1. Install Python 3.12 (python.org, tick "Add python.exe to PATH").
-2. Copy `.env.example` to `.env` and fill in your values (`DATABASE_URL` is required — the app uses only Supabase).
-3. Double-click **START_LOCAL.bat** (or `pip install -r requirements-local.txt` then `python run_local.py`).
-4. Open http://127.0.0.1:8000
-
-## Project structure
-
+```bash
+cd backend && npm run check     # loads every module + rank/period unit checks
 ```
-public/index.html     website (mobile-first, Plotly charts), served by Vercel CDN
-app.py                Python API (FastAPI) – Vercel entrypoint
-core/                 analysis engine
-  indicators.py       EMA, RSI, MACD, Bollinger, ATR, ADX, Supertrend
-  signals.py          technical score and stop/target
-  fundamentals.py     fundamental score and overall rating
-  data_source.py      Yahoo Finance / demo data
-  database.py         Supabase (Postgres)
-  engine.py           scan, save, alerts, signal performance
-vercel.json           routing, timeout, daily cron
-```
+The full API flow (accounts, store, missions, spin, friends, party, guild, matchmaking, dedicated-server results,
+rank points, account deletion) has been exercised end-to-end against Postgres 16.
 
-## Scoring
+## Status and what's placeholder
 
-- **Technical (−100…+100):** trend (200 EMA, 20/50 EMA cross, Supertrend), momentum (RSI, MACD),
-  breakout/volatility (Bollinger, volume spike, 52-week high/low), scaled down when ADX < 20.
-  Stop loss = 2×ATR, target = 3×ATR.
-- **Fundamental (0…100):** valuation (P/E, P/B), profitability (ROE, margin), growth (revenue, profit),
-  health (debt/equity, current ratio, dividend).
-- **Overall:** 50/50 blend. ≥70 Strong Buy · ≥58 Buy · 42–57 Hold · ≥30 Sell · <30 Strong Sell.
-
-## Security
-
-- Never commit `.env` or your database password (`.gitignore` already excludes it).
-- Supabase tables have Row Level Security on with no public policies, so only the
-  server (using your database password) can read or write them.
+The code is complete enough to play: Training Ground runs offline in the editor, and online matches work once a
+dedicated server is running. Art is placeholder (capsule characters, box buildings, procedural island, code-built UI) —
+see `docs/SETUP.md` §8 for swapping in real models. Google login, Facebook login, purchases, Firebase and Vivox each
+need their SDK imported and a checkbox ticked (`docs/SETUP.md` §6).

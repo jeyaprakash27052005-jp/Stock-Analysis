@@ -1,0 +1,20 @@
+# Runs 3 match servers on one VM (each 50-player match needs ~1 vCPU and ~700 MB RAM).
+# Usage:  cp server/.env.example server/.env  (fill it in)  →  docker compose -f server/docker-compose.yml up -d
+x-server: &server
+  image: stormdrop-server
+  restart: always
+  env_file: .env
+
+services:
+  match1:
+    <<: *server
+    ports: ["7777:7777/udp"]
+    environment: { STORMDROP_PORT: "7777" }
+  match2:
+    <<: *server
+    ports: ["7778:7778/udp"]
+    environment: { STORMDROP_PORT: "7778" }
+  match3:
+    <<: *server
+    ports: ["7779:7779/udp"]
+    environment: { STORMDROP_PORT: "7779" }
