@@ -84,7 +84,7 @@ namespace Stormdrop.EditorTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             EditorSceneManager.OpenScene(SceneDir + "/" + GameConstants.BootstrapScene + ".unity");
-            EditorUtility.DisplayDialog("Stormdrop", "Setup complete!\n\n1. Select the GameBootstrap object and set your API URL.\n" +
+            if (!Application.isBatchMode) EditorUtility.DisplayDialog("Stormdrop", "Setup complete!\n\n1. Select the GameBootstrap object and set your API URL.\n" +
                 "2. Press Play, choose Training Ground and START to test offline.\n\nSee docs/SETUP.md for multiplayer and Play Store builds.", "OK");
         }
 

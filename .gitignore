@@ -27,3 +27,4 @@ unity/StormdropRoyale/.idea/
 *.aab
 *.symbols.zip
 server/.env
+unity/StormdropRoyale/build/

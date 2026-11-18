@@ -46,3 +46,27 @@ export async function tx(fn) {
     client.release();
   }
 }
+
+/**
+ * Creates the game tables and starter content the first time the API meets an empty database
+ * (same "tables are created automatically" behaviour as the old app). Runs once per cold start.
+ */
+let _schemaPromise = null;
+export function ensureSchema() {
+  if (!pool) return Promise.resolve("not configured");
+  if (!_schemaPromise) {
+    _schemaPromise = (async () => {
+      const { schemaSql, seedSql } = await import("./generated/assets.js");
+      const r = await pool.query("select to_regclass('public.players') is not null as players, to_regclass('public.items') is not null as items");
+      const hasTables = r.rows[0].players && r.rows[0].items;
+      const items = hasTables ? (await pool.query("select count(*)::int n from items")).rows[0].n : 0;
+      if (!hasTables || items === 0) {
+        await pool.query(schemaSql);
+        await pool.query(seedSql);
+        return "created";
+      }
+      return "ready";
+    })().catch((e) => { _schemaPromise = null; throw e; });
+  }
+  return _schemaPromise;
+}

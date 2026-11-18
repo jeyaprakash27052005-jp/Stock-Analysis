@@ -1,15 +1,28 @@
 import { Router } from "express";
 import { config } from "../config.js";
-import { HttpError, one, query } from "../db.js";
+import { ensureSchema, HttpError, one, query } from "../db.js";
 import { requireCron, requirePlayer } from "../lib/auth.js";
 import { rankInfo } from "../lib/ranks.js";
 
 const r = Router();
 
 r.get("/health", async (_req, res) => {
-  let database = "not configured";
-  try { await one("select 1"); database = "connected"; } catch (e) { database = `error: ${e.message}`; }
-  res.json({ status: "ok", service: "stormdrop-backend", database });
+  const out = { status: "ok", service: "stormdrop-backend", database: "not configured (set DATABASE_URL)", tables: null,
+                apkConfigured: true };
+  if (process.env.DATABASE_URL) {
+    try {
+      await one("select 1");
+      out.database = "connected";
+      try {
+        out.tables = await ensureSchema();
+        out.players = (await one("select count(*)::int n from players where deleted_at is null")).n;
+        out.serversOnline = (await one("select count(*)::int n from game_servers where last_heartbeat > now() - interval '1 minute'")).n;
+      } catch (e) { out.tables = `setup failed: ${e.message}`; }
+    } catch (e) {
+      out.database = `error: ${e.code || e.message}`;
+    }
+  }
+  res.set("Cache-Control", "no-store").json(out);
 });
 
 r.get("/leaderboard", async (req, res) => {

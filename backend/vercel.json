@@ -1,21 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    }
-  ],
-  "functions": {
-    "api/index.js": {
-      "maxDuration": 30
-    }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/cleanup",
-      "schedule": "30 20 * * *"
-    }
-  ],
-  "cleanUrls": true
+  "crons": [{ "path": "/api/cron/cleanup", "schedule": "30 20 * * *" }]
 }
