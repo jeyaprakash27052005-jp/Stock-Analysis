@@ -76,6 +76,7 @@ r.get("/cron/cleanup", requireCron, async (_req, res) => {
   out.matches = (await query("update matches set status='abandoned' where status in ('allocated','running') and created_at < now() - interval '2 hours'")).rowCount;
   out.invites = (await query("delete from party_invites where created_at < now() - interval '1 day'")).rowCount;
   out.chat = (await query("delete from chat_messages where created_at < now() - interval '30 days'")).rowCount;
+  out.deletedAccounts = (await one("select purge_inactive_players($1) n", [config.inactiveDeleteDays])).n;
   res.json({ ok: true, ...out });
 });
 

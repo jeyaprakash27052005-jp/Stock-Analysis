@@ -15,6 +15,12 @@ for (const file of ["schema.sql", "seed.sql"]) {
   await client.query(fs.readFileSync(path.join(dir, file), "utf8"));
   console.log("done");
 }
+try {
+  await client.query(fs.readFileSync(path.join(dir, "jobs.sql"), "utf8"));
+  console.log("Scheduled daily jobs (pg_cron)");
+} catch (e) {
+  console.log("pg_cron not available, daily jobs run via Vercel Cron instead:", e.message);
+}
 const { rows } = await client.query("select type, count(*)::int n from items group by type order by type");
 console.table(rows);
 await client.end();

@@ -11,6 +11,7 @@
 | Is all of the user data collected by your app encrypted in transit? | **Yes** (HTTPS to the backend; Netcode traffic over UDP carries gameplay only) |
 | Do you provide a way for users to request that their data is deleted? | **Yes** — in-app (Settings → Delete account) and web: `https://[your-project].vercel.app/delete-account` |
 | Account creation methods | Username/other (guest), OAuth (Google, Facebook) |
+| Data retention | Accounts with no activity for 30 days (e.g. app uninstalled) are permanently deleted by a daily job; purchase records are kept without the player link for tax purposes |
 | Delete account URL | `https://[your-project].vercel.app/delete-account` |
 
 ## Data types

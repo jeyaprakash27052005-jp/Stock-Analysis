@@ -26,6 +26,8 @@ export const config = {
     training:    { teamSize: 1, maxPlayers: 1,  minPlayers: 1 },
   },
   // Wait this long for a full lobby before starting with minPlayers
+  // Accounts with no app activity for this many days are permanently deleted (daily job).
+  inactiveDeleteDays: Number(env.INACTIVE_DELETE_DAYS || 30),
   matchmakingFillSeconds: Number(env.MM_FILL_SECONDS || 45),
   // Diamond packs sold through Google Play (product ids must match Play Console → Monetize → In-app products)
   diamondPacks: {
